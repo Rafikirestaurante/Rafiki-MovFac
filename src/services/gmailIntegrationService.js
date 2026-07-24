@@ -95,7 +95,7 @@ export const testGmailConnection = () => invoke("gmail-test-connection");
 export const diagnoseGmailConnection = () => invoke("gmail-diagnostics");
 export const disconnectGmail = () => invoke("gmail-disconnect");
 export const syncGmailNow = (dateFrom, dateTo) => invoke("gmail-sync-now", { mode: "range", date_from: dateFrom, date_to: dateTo });
-export const syncGmailQuick = () => invoke("gmail-sync-now", { mode: "quick" });
+export const syncGmailQuick = (hours = 1) => invoke("gmail-sync-now", { mode: "quick", quick_hours: hours });
 export const syncInvoicesRecent = () => invoke("gmail-sync-invoices", { mode: "recent" });
 export const syncInvoicesRange = (dateFrom, dateTo) => invoke("gmail-sync-invoices", { mode: "range", date_from: dateFrom, date_to: dateTo });
 

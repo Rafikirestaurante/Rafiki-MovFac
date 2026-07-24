@@ -17,3 +17,5 @@ La operación:
 - Nota histórica: aquí se mantenía un límite de una solicitud por minuto; la versión 1.3.2 / Fase 3A.1 lo retiró.
 
 No requiere SQL nuevo. Debe redesplegarse `gmail-sync-now` y se recomienda redesplegar `employee-public-access`.
+
+> **Actualización Fase 3A.3:** este documento conserva la regla histórica de la Fase 2B.3.4. La operación vigente permite ventanas de 1, 3 y 6 horas. Consulta `FASE-3A3-BUSQUEDAS-1-3-6-HORAS.md`.

@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const expectedVersion = "1.3.3";
-const expectedPhase = "Fase 3A.2";
+const expectedVersion = "1.3.4";
+const expectedPhase = "Fase 3A.3";
 
 const migrations = [
   "supabase/2026-07-14-fase1a-base-independiente.sql",
@@ -73,6 +73,8 @@ const required = [
   "RESUMEN-FASE3A1.md",
   "docs/FASE-3A2-NUEVA-REGLA-BANCOLOMBIA.md",
   "RESUMEN-FASE3A2.md",
+  "docs/FASE-3A3-BUSQUEDAS-1-3-6-HORAS.md",
+  "RESUMEN-FASE3A3.md",
   "tests/calendar.test.js",
   "tests/bancolombia.test.ts",
   "tests/electronicInvoice.test.ts",
@@ -115,9 +117,9 @@ requireText(settings, "APP_VERSION", "SettingsPage.jsx");
 requireText(settings, "APP_PHASE_TITLE", "SettingsPage.jsx");
 
 const readme = read("README.md");
-requireText(readme, `**${expectedVersion} — ${expectedPhase}: nueva regla Bancolombia para pagos con tipo**`, "README.md");
+requireText(readme, `**${expectedVersion} — ${expectedPhase}: búsquedas Bancolombia de 1, 3 y 6 horas**`, "README.md");
 requireText(readme, "npm install --package-lock=false", "README.md");
-requireText(readme, "Las Fases 3A.1 y 3A.2 no requieren migraciones SQL nuevas", "README.md");
+requireText(readme, "Las Fases 3A.1, 3A.2 y 3A.3 no requieren migraciones SQL nuevas", "README.md");
 for (const migration of migrations) requireText(readme, migration, "README.md");
 for (const functionName of edgeFunctions) requireText(readme, `\`${functionName}\``, "README.md");
 
@@ -181,9 +183,20 @@ requireText(supabaseConfig, "verify_jwt = false", "supabase/config.toml");
 
 const employeePage = read("src/pages/EmployeePublicPage.jsx");
 if (employeePage.includes("una vez por minuto")) fail("EmployeePublicPage todavía menciona el límite de un minuto.");
+for (const token of ["synchronize(1)", "synchronize(3)", "synchronize(6)", "Búsqueda rápida", "3 horas", "6 horas"]) requireText(employeePage, token, "EmployeePublicPage.jsx");
+const movementsPage = read("src/pages/MovementsPage.jsx");
+for (const token of ["synchronizeQuick(1)", "synchronizeQuick(3)", "synchronizeQuick(6)", "Búsqueda rápida", "3 horas", "6 horas"]) requireText(movementsPage, token, "MovementsPage.jsx");
+const gmailService = read("src/services/gmailIntegrationService.js");
+requireText(gmailService, 'quick_hours: hours', "gmailIntegrationService.js");
+const employeeService = read("src/services/employeeAccessService.js");
+requireText(employeeService, 'quick_hours: hours', "employeeAccessService.js");
 const syncNow = read("supabase/functions/gmail-sync-now/index.ts");
 if (syncNow.includes("sync_rate_limited") || syncNow.includes("wait_seconds: 60")) fail("gmail-sync-now todavía contiene el rate limit público de un minuto.");
-for (const token of ["requires_review: true", "unsupported_notification", "unrecognized_reason"]) requireText(syncNow, token, "gmail-sync-now");
+for (const token of ["requires_review: true", "unsupported_notification", "unrecognized_reason", "[1, 3, 6].includes(requestedQuickHours)", "quickHours === 6 ? 120 : quickHours === 3 ? 60 : 20", "after:${Math.floor(quickStart.getTime() / 1000)}"]) requireText(syncNow, token, "gmail-sync-now");
+
+const employeePublicAccess = read("supabase/functions/employee-public-access/index.ts");
+for (const token of ["quick_window_hours: [1, 3, 6]", "quick_message_limits: { 1: 20, 3: 60, 6: 120 }"]) requireText(employeePublicAccess, token, "employee-public-access");
+
 const bancolombiaExtractor = read("supabase/functions/_shared/bancolombia.ts");
 for (const token of [
   'BANCOLOMBIA_EXTRACTOR_VERSION = "bancolombia-3A2-v3"',

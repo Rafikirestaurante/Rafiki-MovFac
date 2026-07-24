@@ -426,7 +426,7 @@ export default function SettingsPage({ profile }) {
           <div><span className="eyebrow">Acceso restringido</span><h2>Enlace público para empleados</h2></div>
           <Badge tone={employeeEnabled ? "success" : "neutral"}>{employeeEnabled ? "Activo" : "Desactivado"}</Badge>
         </div>
-        <p className="panel-description">Permite consultar solamente los cinco movimientos más recientes, buscar hasta 20 alertas Bancolombia de la última hora, confirmar ingresos e instalar una PWA independiente para empleados.</p>
+        <p className="panel-description">Permite consultar solamente los cinco movimientos más recientes, buscar alertas Bancolombia de la última 1, 3 o 6 horas, confirmar ingresos e instalar una PWA independiente para empleados.</p>
         {employeeMessage ? <Alert tone={employeeTone}>{employeeMessage}</Alert> : null}
         <div className="employee-access-form">
           <label><span>Nombre de acceso</span><input value={employeeUsername} maxLength={40} onChange={(event) => setEmployeeUsername(event.target.value.toLowerCase())} placeholder="empleados" disabled={!isAdmin || Boolean(employeeAction)} /></label>

@@ -115,13 +115,15 @@ export default function EmployeePublicPage() {
     }
   }
 
-  async function synchronize() {
-    setAction("sync");
+  async function synchronize(hours = 1) {
+    setAction(`sync-${hours}`);
     setMessage("");
     try {
-      const data = await syncEmployeePublicMovements(session.access_token);
+      const data = await syncEmployeePublicMovements(session.access_token, hours);
+      const usedHours = Number(data.quick_hours || hours);
+      const limit = Number(data.quick_message_limit || (usedHours === 6 ? 120 : usedHours === 3 ? 60 : 20));
       setTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setMessage(`Búsqueda rápida completada: ${data.bancolombia_emails || data.messages_scanned || 0} de hasta 20 alerta(s) de Bancolombia revisada(s) durante la última hora, ${data.movements_created || 0} movimiento(s) nuevo(s), ${data.duplicates_ignored || data.movement_duplicates || 0} ya registrado(s) y ${data.bancolombia_unidentified || 0} alerta(s) guardada(s) para revisión.`);
+      setMessage(`Búsqueda de ${usedHours} ${usedHours === 1 ? "hora" : "horas"} completada: ${data.bancolombia_emails || data.messages_scanned || 0} de hasta ${limit} alerta(s) de Bancolombia revisada(s), ${data.movements_created || 0} movimiento(s) nuevo(s), ${data.duplicates_ignored || data.movement_duplicates || 0} ya registrado(s) y ${data.bancolombia_unidentified || 0} alerta(s) guardada(s) para revisión.`);
       await load(session, true);
     } catch (error) {
       setTone("danger");
@@ -205,15 +207,19 @@ export default function EmployeePublicPage() {
         </div>
 
         <section className="employee-quick-sync-card">
-          <div className="movement-sync-copy"><strong>Búsqueda rápida</strong><small>Revisa como máximo las 20 alertas más recientes de Bancolombia recibidas durante la última hora.</small></div>
-          <button className="primary-button" onClick={synchronize} disabled={Boolean(action) || loading}><Icon name="refresh" size={18} /> {action === "sync" ? "Buscando..." : "Búsqueda rápida"}</button>
+          <div className="movement-sync-copy"><strong>Búsqueda Bancolombia</strong><small>Revisa exclusivamente las alertas recibidas durante la última 1, 3 o 6 horas exactas desde el momento del clic.</small></div>
+          <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
+            <button className="primary-button" onClick={() => synchronize(1)} disabled={Boolean(action) || loading}><Icon name="refresh" size={18} /> {action === "sync-1" ? "Buscando..." : "Búsqueda rápida"}</button>
+            <button className="secondary-button" onClick={() => synchronize(3)} disabled={Boolean(action) || loading}>{action === "sync-3" ? "Buscando..." : "3 horas"}</button>
+            <button className="secondary-button" onClick={() => synchronize(6)} disabled={Boolean(action) || loading}>{action === "sync-6" ? "Buscando..." : "6 horas"}</button>
+          </div>
         </section>
 
         {message ? <Alert tone={tone}>{message}</Alert> : null}
         {latest ? <div className="employee-latest-banner"><span>Último movimiento actualizado</span><strong>{formatMoment(latest.transaction_at)}</strong></div> : null}
 
         {loading ? <div className="employee-public-loading">Consultando movimientos...</div> : movements.length === 0 ? (
-          <section className="employee-empty"><Icon name="movements" size={32} /><h2>No hay movimientos disponibles</h2><p>Presiona Búsqueda rápida para revisar hasta 20 alertas de Bancolombia recibidas durante la última hora.</p></section>
+          <section className="employee-empty"><Icon name="movements" size={32} /><h2>No hay movimientos disponibles</h2><p>Usa Búsqueda rápida, 3 horas o 6 horas para consultar las alertas recientes de Bancolombia.</p></section>
         ) : (
           <section className="employee-movement-list">
             {movements.map((movement, index) => (
@@ -236,7 +242,7 @@ export default function EmployeePublicPage() {
             ))}
           </section>
         )}
-        <p className="employee-public-footer-note">La búsqueda pública revisa como máximo 20 alertas Bancolombia de la última hora. Si una alerta no puede interpretarse, queda registrada para revisión administrativa.</p>
+        <p className="employee-public-footer-note">La búsqueda pública permite revisar 1, 3 o 6 horas exactas de alertas Bancolombia. Si una alerta no puede interpretarse, queda registrada para revisión administrativa.</p>
       </section>
 
       {confirming ? (

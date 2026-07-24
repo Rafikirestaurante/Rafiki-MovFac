@@ -51,3 +51,7 @@ El trabajador escribe su nombre y, opcionalmente, una observación. La confirmac
 - `employee_public_access_settings`
 - `employee_payment_confirmations`
 - `employee_public_access_log`
+
+## Actualización Fase 3A.3
+
+La operación vigente reemplaza la única ventana de una hora por tres botones disponibles en `/empleados`: **Búsqueda rápida (1 hora)**, **3 horas** y **6 horas**. Todas consultan exclusivamente el remitente oficial de alertas Bancolombia. Los límites son 20, 60 y 120 alertas respectivamente. No existe espera de un minuto entre ejecuciones; solo se impide iniciar otra sincronización mientras una global siga en curso.

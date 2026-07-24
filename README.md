@@ -4,9 +4,9 @@
 
 ## Versión actual
 
-**1.3.3 — Fase 3A.2: nueva regla Bancolombia para pagos con tipo**
+**1.3.4 — Fase 3A.3: búsquedas Bancolombia de 1, 3 y 6 horas**
 
-Esta revisión parte de la versión 1.3.2 y añade una regla Bancolombia para alertas con la estructura `Recibiste un pago [TIPO] de [ORIGEN] por $[VALOR]`, incluyendo el caso real `PROVEEDOR de REDEBAN SA`. El origen se conserva como detalle visible, el tipo de pago se guarda en metadatos y la hora explícita del movimiento tiene prioridad sobre una hora visual previa del correo.
+Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki Empleados** tres ventanas de consulta Bancolombia: 1 hora, 3 horas y 6 horas exactas hacia atrás desde el momento del clic. Las búsquedas siguen limitadas al remitente oficial de alertas Bancolombia, mantienen control de duplicados y conservan para revisión cualquier formato no reconocido.
 
 ## Funciones disponibles
 
@@ -20,7 +20,7 @@ Esta revisión parte de la versión 1.3.2 y añade una regla Bancolombia para al
 - OAuth 2.0 de Gmail con permiso de solo lectura.
 - Refresh token cifrado mediante AES-256-GCM.
 - Diagnóstico técnico de conexión con Gmail y Edge Functions.
-- Sincronización rápida de hasta 20 alertas Bancolombia recibidas durante la última hora.
+- Búsqueda Bancolombia por ventanas exactas: 1 hora (hasta 20 alertas), 3 horas (hasta 60) y 6 horas (hasta 120), disponible en Movimientos y `/empleados`.
 - Sincronización histórica de movimientos por rango de fechas.
 - Extracción de ingresos, transferencias y compras con tarjeta de Bancolombia.
 - Reconocimiento de pagos Bancolombia con tipo intermedio, por ejemplo `Recibiste un pago PROVEEDOR de REDEBAN SA por $114109.00`.
@@ -34,7 +34,7 @@ Esta revisión parte de la versión 1.3.2 y añade una regla Bancolombia para al
 - Acceso restringido para empleados a los cinco movimientos más recientes.
 - Confirmaciones de pagos almacenadas de forma separada, sin modificar el movimiento bancario.
 - Registro de sincronizaciones, errores y auditoría documental.
-- `/empleados` puede solicitar una nueva búsqueda rápida sin esperar un minuto; se conserva el bloqueo de una sincronización global que ya esté en ejecución.
+- `/empleados` puede solicitar búsquedas de 1, 3 o 6 horas sin espera artificial entre ejecuciones; se conserva únicamente el bloqueo de una sincronización global que ya esté en ejecución.
 - Las alertas recibidas desde `alertasynotificaciones@an.notificacionesbancolombia.com` que no coinciden con una regla conocida permanecen registradas en `gmail_sync_candidates` para revisión, sin crear un movimiento financiero falso.
 - Inicio incluye un calendario mensual navegable con movimientos, facturas y alertas Bancolombia no reconocidas por día.
 
@@ -72,7 +72,7 @@ Ejecuta en Supabase SQL Editor, respetando este orden:
 6. `supabase/2026-07-17-fase2b32-simplificacion-operativa.sql`
 7. `supabase/2026-07-17-fase2d-facturacion-electronica.sql`
 
-Las Fases 3A.1 y 3A.2 no requieren migraciones SQL nuevas. La 3A.2 solo amplía el extractor Bancolombia y sus pruebas, reutilizando la estructura existente.
+Las Fases 3A.1, 3A.2 y 3A.3 no requieren migraciones SQL nuevas. La 3A.3 amplía únicamente la ventana de búsqueda rápida y reutiliza la estructura existente.
 
 ## Secretos de Supabase Edge Functions
 
@@ -191,6 +191,9 @@ Los secretos de Gmail deben permanecer exclusivamente en Supabase Edge Functions
 - `docs/FASE-2B2-ACCESO-PUBLICO-EMPLEADOS.md`
 - `docs/FASE-2D-FACTURACION-ELECTRONICA.md`
 - `docs/FASE-3A-ESTABILIZACION-BASE.md`
+- `docs/FASE-3A1-AJUSTES-OPERATIVOS-CALENDARIO.md`
+- `docs/FASE-3A2-NUEVA-REGLA-BANCOLOMBIA.md`
+- `docs/FASE-3A3-BUSQUEDAS-1-3-6-HORAS.md`
 - `docs/CRONOGRAMA-PROYECTO.md`
 
 ## Próxima etapa recomendada

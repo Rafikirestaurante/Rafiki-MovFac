@@ -97,7 +97,7 @@ Deno.serve(async (request: Request) => {
         access_token: session.token,
         expires_at: session.expires_at,
         username: settings.username,
-        restrictions: { movement_limit: 5, quick_window_hours: 1, quick_message_limit: 20, confirm_income_only: true }
+        restrictions: { movement_limit: 5, quick_window_hours: [1, 3, 6], quick_message_limits: { 1: 20, 3: 60, 6: 120 }, confirm_income_only: true }
       });
     }
 

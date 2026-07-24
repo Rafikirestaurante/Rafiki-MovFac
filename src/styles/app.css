@@ -459,6 +459,8 @@ code { font-size: .9em; background: rgba(16,42,67,.08); padding: 2px 5px; border
 .hour-selector button { min-width: 48px; min-height: 35px; padding: 0 11px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-weight: 850; cursor: pointer; }
 .hour-selector button.active { color: white; background: var(--blue); box-shadow: 0 4px 10px rgba(23,102,149,.18); }
 .hour-selector button:disabled { opacity: .55; cursor: not-allowed; }
+.quick-sync-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.quick-sync-actions .primary-button, .quick-sync-actions .secondary-button { min-height: 42px; white-space: nowrap; }
 .range-sync-details, .movement-range-sync { margin: 12px 0 16px; border: 1px solid #e1e9ef; border-radius: 12px; background: #fafcfd; }
 .range-sync-details > summary, .movement-range-sync > summary { padding: 12px 14px; cursor: pointer; color: var(--navy); font-size: 12px; font-weight: 800; }
 .range-sync-details[open] > summary, .movement-range-sync[open] > summary { border-bottom: 1px solid #e5ecf1; }
@@ -472,6 +474,8 @@ code { font-size: .9em; background: rgba(16,42,67,.08); padding: 2px 5px; border
   .hour-selector { width: 100%; }
   .hour-selector button { flex: 1; }
   .quick-sync-panel > button, .quick-movement-sync-card > button { width: 100%; }
+  .quick-sync-actions { width: 100%; justify-content: stretch; }
+  .quick-sync-actions > button { flex: 1 1 120px; }
 }
 .unrecognized-alerts { margin-top: 10px; border: 1px solid #ead8a6; border-radius: 11px; overflow: hidden; background: #fffdf7; }
 .unrecognized-alerts summary { padding: 11px 12px; cursor: pointer; color: #725500; font-size: 11px; font-weight: 800; }
@@ -551,6 +555,8 @@ html[data-surface="employees"] body { background: #f4f7fa; }
   .employee-quick-sync-card .hour-selector { width: 100%; }
   .employee-quick-sync-card .hour-selector button { flex: 1; }
   .employee-quick-sync-card > button { width: 100%; }
+  .employee-quick-sync-card .quick-sync-actions { width: 100%; }
+  .employee-quick-sync-card .quick-sync-actions > button { flex: 1 1 105px; }
   .employee-install-box { grid-template-columns: auto minmax(0, 1fr); }
   .employee-install-box > button, .employee-install-help { grid-column: 1 / -1; width: 100%; max-width: none; text-align: center; }
   .employee-header-actions .secondary-button { padding-inline: 10px; }

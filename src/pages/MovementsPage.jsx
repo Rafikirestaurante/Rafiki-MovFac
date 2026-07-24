@@ -73,6 +73,7 @@ export default function MovementsPage({ profile }) {
   const [dateFrom, setDateFrom] = useState(bogotaDay(-6));
   const [dateTo, setDateTo] = useState(bogotaDay());
   const [syncing, setSyncing] = useState(false);
+  const [quickSyncHours, setQuickSyncHours] = useState(null);
   const [syncMessage, setSyncMessage] = useState("");
   const [syncTone, setSyncTone] = useState("info");
 
@@ -92,19 +93,23 @@ export default function MovementsPage({ profile }) {
 
   useEffect(() => { load(); }, []);
 
-  async function synchronizeQuick() {
+  async function synchronizeQuick(hours = 1) {
     setSyncing(true);
+    setQuickSyncHours(hours);
     setSyncMessage("");
     try {
-      const data = await syncGmailQuick();
+      const data = await syncGmailQuick(hours);
+      const usedHours = Number(data.quick_hours || hours);
+      const limit = Number(data.quick_message_limit || (usedHours === 6 ? 120 : usedHours === 3 ? 60 : 20));
       setSyncTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setSyncMessage(`Búsqueda rápida completada: ${data.messages_scanned || data.messages_found || 0} de hasta 20 alertas de Bancolombia revisadas durante la última hora, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
+      setSyncMessage(`Búsqueda de ${usedHours} ${usedHours === 1 ? "hora" : "horas"} completada: ${data.messages_scanned || data.messages_found || 0} de hasta ${limit} alertas de Bancolombia revisadas, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
       await load();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (syncError) {
       setSyncTone("danger");
-      setSyncMessage(syncError.message || "No se pudo ejecutar la sincronización rápida.");
+      setSyncMessage(syncError.message || "No se pudo ejecutar la búsqueda de Bancolombia.");
     } finally {
+      setQuickSyncHours(null);
       setSyncing(false);
     }
   }
@@ -155,13 +160,17 @@ export default function MovementsPage({ profile }) {
 
       <section className="quick-movement-sync-card">
         <div className="movement-sync-copy">
-          <span className="eyebrow">Recomendado</span>
-          <strong>Búsqueda rápida</strong>
-          <small>Revisa como máximo las 20 alertas más recientes de Bancolombia recibidas durante la última hora.</small>
+          <span className="eyebrow">Bancolombia</span>
+          <strong>Búsqueda por horas</strong>
+          <small>Busca exclusivamente alertas de Bancolombia recibidas durante la última 1, 3 o 6 horas exactas desde el momento del clic.</small>
         </div>
-        <button className="primary-button" onClick={synchronizeQuick} disabled={!isAdmin || syncing || loading}>
-          <Icon name="refresh" size={18} /> {syncing ? "Buscando..." : "Búsqueda rápida"}
-        </button>
+        <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
+          <button className="primary-button" onClick={() => synchronizeQuick(1)} disabled={!isAdmin || syncing || loading}>
+            <Icon name="refresh" size={18} /> {quickSyncHours === 1 ? "Buscando..." : "Búsqueda rápida"}
+          </button>
+          <button className="secondary-button" onClick={() => synchronizeQuick(3)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 3 ? "Buscando..." : "3 horas"}</button>
+          <button className="secondary-button" onClick={() => synchronizeQuick(6)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 6 ? "Buscando..." : "6 horas"}</button>
+        </div>
       </section>
 
       <details className="movement-range-sync">

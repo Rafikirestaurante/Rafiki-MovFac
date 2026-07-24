@@ -33,7 +33,7 @@ Base oficial: proyecto independiente Rafiki MF, completamente separado de Rafiki
 - Acceso restringido `/empleados`.
 - PWA independiente Rafiki Empleados.
 - Consulta máxima de cinco movimientos.
-- Búsqueda rápida de 20 alertas de la última hora.
+- Búsqueda Bancolombia de 1, 3 y 6 horas exactas (20/60/120 alertas).
 - Confirmación separada de pagos recibidos.
 
 ### 2D — Facturación electrónica
