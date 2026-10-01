@@ -195,6 +195,7 @@ export default function EmployeePublicPage() {
     <main className="employee-public-page">
       <header className="employee-public-header">
         <div className="employee-fixed-tabs"><a href="/">Vista normal</a><a className="active" href="/empleados">Empleados</a></div>
+        <div className="employee-auto-indicator"><span className="sync-dot"></span><strong>Movimientos</strong><span>Cada 15 segundos</span><button type="button">Desactivar</button></div>
         <div className="employee-public-brand"><span>R</span><div><strong>Rafiki Empleados</strong><small>Pagos recientes</small></div></div>
         <div className="employee-header-actions">
           {!installed && installPrompt ? <button className="secondary-button" onClick={installEmployeeApp}><Icon name="install" size={17} /> Instalar</button> : null}
@@ -207,7 +208,7 @@ export default function EmployeePublicPage() {
           <div><span className="eyebrow">Movimientos del día</span><h1>Movimientos de hoy</h1><p>Se muestran todos los movimientos registrados durante el día. Los pagos recibidos pueden confirmarse una sola vez.</p></div>
         </div>
 
-        <details className="employee-quick-sync-card employee-manual-sync" open>
+        <details className="employee-quick-sync-card employee-manual-sync">
           <summary>Sincronización manual</summary>
           <div className="movement-sync-copy"><strong>Búsqueda Bancolombia</strong><small>Revisa exclusivamente las alertas recibidas durante la última 1, 3 o 6 horas exactas desde el momento del clic.</small></div>
           <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
@@ -231,15 +232,6 @@ export default function EmployeePublicPage() {
                   <div><div className="employee-movement-heading"><strong>{movementLabels[movement.movement_type] || "Movimiento"}</strong>{index === 0 ? <Badge tone="blue">Más reciente</Badge> : null}</div><span>{movement.detail || "Sin detalle"}</span><small>{formatMoment(movement.transaction_at)} · {movement.source === "bancolombia" ? "Bancolombia" : "Nequi"}</small></div>
                 </div>
                 <div className={`employee-movement-value ${movement.movement_type === "income" ? "income" : "outgoing"}`}>{movement.movement_type === "income" ? "+" : "−"}{cop(movement.amount_cop)}</div>
-                <div className="employee-confirmation-area">
-                  {movement.confirmed ? (
-                    <div className="employee-confirmed"><Icon name="check" size={17} /><div><strong>Recepción confirmada</strong><small>Por {movement.confirmation?.employee_name || "empleado"} · {formatMoment(movement.confirmation?.confirmed_at)}</small>{movement.confirmation?.note ? <span>{movement.confirmation.note}</span> : null}</div></div>
-                  ) : movement.can_confirm ? (
-                    <button className="secondary-button" onClick={() => openConfirmation(movement)} disabled={Boolean(action)}>Confirmar recepción</button>
-                  ) : (
-                    <small className="employee-not-confirmable">Este tipo de movimiento es solo informativo.</small>
-                  )}
-                </div>
               </article>
             ))}
           </section>

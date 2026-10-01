@@ -698,5 +698,18 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 .employee-fixed-tabs { display:flex; gap:4px; margin-right:12px; padding:3px; border-radius:9px; background:rgba(255,255,255,.12); }
 .employee-fixed-tabs a { padding:6px 9px; border-radius:7px; color:#c9d8e5; text-decoration:none; font-size:10px; font-weight:800; white-space:nowrap; }
 .employee-fixed-tabs a.active { background:#fff; color:#17354d; }
+.employee-auto-indicator { display:flex; align-items:center; gap:5px; margin-left:auto; margin-right:12px; padding:4px 7px; border-radius:7px; background:rgba(255,255,255,.1); color:#d8e6ef; font-size:9px; white-space:nowrap; }
+.employee-auto-indicator .sync-dot { width:6px; height:6px; border-radius:50%; background:#35b75a; }
+.employee-auto-indicator button { border:0; padding:3px 5px; border-radius:5px; background:#2d4b63; color:#fff; font-size:9px; cursor:pointer; }
+.movement-options { margin:0 0 12px; }
+.movement-options > summary { display:inline-block; cursor:pointer; padding:6px 10px; border:1px solid var(--line); border-radius:7px; color:var(--muted); background:#fff; font-size:10px; font-weight:800; }
+.movement-options[open] > summary { color:var(--ink); background:#f5f8fa; }
+.movement-options .manual-sync-group, .movement-options .manual-sync-range { margin-top:8px; }
+.employee-movement-card { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px 10px; padding:9px 12px; }
+.employee-confirmation-area { display:none; }
+.employee-movement-main { gap:8px; }
+.employee-movement-main small { font-size:10px; }
+.employee-movement-value { font-size:14px; }
+@media (min-width:900px) { .module-sync-indicator { display:inline-flex; width:auto; padding:4px 7px; margin-bottom:8px; font-size:9px; } .module-sync-indicator .sync-dot { width:6px; height:6px; } .auto-sync-control { padding:5px 8px; margin-bottom:8px; font-size:9px; } }
 .manual-sync-group, .employee-manual-sync { border:1px solid var(--line); border-radius:10px; padding:0 12px 12px; }
 .manual-sync-group > summary, .employee-manual-sync > summary { cursor:pointer; padding:11px 0; font-weight:800; color:var(--ink); }

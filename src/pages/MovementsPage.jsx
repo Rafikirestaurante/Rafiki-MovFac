@@ -164,6 +164,8 @@ export default function MovementsPage({ profile, syncIndicator }) {
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {syncMessage ? <Alert tone={syncTone}>{syncMessage}</Alert> : null}
 
+      <details className="movement-options">
+        <summary>Opciones</summary>
       <details className="quick-movement-sync-card manual-sync-group">
         <summary>Sincronización manual</summary>
         <div className="movement-sync-copy">
@@ -194,6 +196,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
           </button>
         </section>
       </details>
+      </details>
       {!isAdmin ? <Alert tone="warning">Solo el Administrador puede iniciar la sincronización. Los Revisores sí pueden consultar los movimientos.</Alert> : null}
 
       {latestMovement ? (
@@ -208,12 +211,12 @@ export default function MovementsPage({ profile, syncIndicator }) {
       ) : null}
 
       <section className="panel-card">
-        <div className="filter-bar movement-filters">
+        <details className="movement-filter-options"><summary>Búsqueda y filtros</summary><div className="filter-bar movement-filters">
           <div className="search-box"><Icon name="search" size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar detalle, referencia, fecha, hora o valor" /></div>
           <label className="compact-filter"><span>Fecha</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
           <label className="compact-filter"><span>Origen</span><select value={source} onChange={(event) => setSource(event.target.value)}><option value="all">Todos</option><option value="bancolombia">Bancolombia</option><option value="nequi">Nequi</option></select></label>
           {(search || date || source !== "all") ? <button className="filter-button" onClick={() => { setSearch(""); setDate(""); setSource("all"); }}>Limpiar</button> : null}
-        </div>
+        </div></details>
 
         {loading ? <div className="table-loading">Consultando movimientos...</div> : filtered.length === 0 ? (
           <EmptyState icon="movements" title={rows.length ? "No hay coincidencias" : "No hay movimientos documentados"} description={rows.length ? "Cambia o limpia los filtros para volver a ver los registros." : "Usa el botón Sincronizar ahora para consultar las alertas de Bancolombia."} />
