@@ -713,3 +713,48 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 @media (min-width:900px) { .module-sync-indicator { display:inline-flex; width:auto; padding:4px 7px; margin-bottom:8px; font-size:9px; } .module-sync-indicator .sync-dot { width:6px; height:6px; } .auto-sync-control { padding:5px 8px; margin-bottom:8px; font-size:9px; } }
 .manual-sync-group, .employee-manual-sync { border:1px solid var(--line); border-radius:10px; padding:0 12px 12px; }
 .manual-sync-group > summary, .employee-manual-sync > summary { cursor:pointer; padding:11px 0; font-weight:800; color:var(--ink); }
+
+/* Fase 5 — shell compacto, opciones discretas y paginación */
+.sidebar { transform: translateX(-102%); transition: transform .2s ease; }
+.sidebar.sidebar-open { transform: translateX(0); }
+.close-sidebar { display: grid; }
+.sidebar-backdrop { position: fixed; inset: 0; z-index: 25; border: 0; background: rgba(4,19,32,.48); }
+.main-panel { margin-left: 0; }
+.mobile-topbar { position: sticky; top: 0; z-index: 20; height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(16px, 3.4vw, 54px); background: rgba(255,255,255,.96); border-bottom: 1px solid #e0e8ee; backdrop-filter: blur(12px); }
+.mobile-brand { display: flex; align-items: center; gap: 8px; font-weight: 850; font-size: 14px; }
+.mobile-brand span { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 8px; color: var(--navy); background: var(--gold); }
+.menu-trigger { color: var(--navy); border: 1px solid var(--line); background: white; }
+.bottom-nav { display: none !important; }
+
+.movement-options { margin: 0 0 12px; }
+.movement-options > summary { display: inline-flex; align-items: center; cursor: pointer; padding: 7px 11px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: white; font-size: 10px; font-weight: 800; }
+.movement-options[open] > summary { color: var(--ink); background: #f5f8fa; }
+.movement-options-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 8px; margin-top: 8px; }
+.movement-option-group { min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.movement-option-group > summary { cursor: pointer; padding: 10px 12px; color: var(--ink); font-size: 11px; font-weight: 800; }
+.movement-option-group[open] > summary { border-bottom: 1px solid #edf1f4; }
+.movement-option-group .quick-sync-actions { justify-content: flex-start; padding: 10px 12px 12px; }
+.movement-option-group .quick-sync-actions .primary-button,
+.movement-option-group .quick-sync-actions .secondary-button,
+.movement-range-controls .primary-button { min-height: 36px; padding-inline: 11px; font-size: 11px; }
+.movement-range-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: 8px; padding: 10px 12px 12px; }
+.movement-range-controls label { display: grid; gap: 5px; min-width: 0; }
+.movement-range-controls label span { color: var(--muted); font-size: 10px; font-weight: 750; }
+.movement-range-controls input { min-height: 36px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 0 9px; color: var(--ink); background: white; font-size: 11px; }
+.results-caption { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pagination-controls { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); white-space: nowrap; }
+.pagination-controls .icon-button { width: 30px; height: 30px; border: 1px solid var(--line); color: var(--ink); background: white; }
+.pagination-controls .icon-button:disabled { background: #f5f7f9; }
+
+@media (max-width: 780px) {
+  body { padding-bottom: 0; }
+  .movement-options-grid { grid-template-columns: 1fr; }
+  .movement-range-controls { grid-template-columns: 1fr 1fr; }
+  .movement-range-controls .primary-button { grid-column: 1 / -1; }
+}
+
+@media (max-width: 500px) {
+  .movement-option-group .quick-sync-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .movement-option-group .quick-sync-actions .primary-button { grid-column: 1 / -1; }
+  .results-caption { align-items: flex-start; flex-direction: column; gap: 8px; }
+}

@@ -12,6 +12,8 @@ const typeLabels = {
   unknown: "Sin identificar"
 };
 
+const PAGE_SIZE = 50;
+
 function cop(value) {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -76,6 +78,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
   const [quickSyncHours, setQuickSyncHours] = useState(null);
   const [syncMessage, setSyncMessage] = useState("");
   const [syncTone, setSyncTone] = useState("info");
+  const [page, setPage] = useState(1);
 
   const isAdmin = profile?.role === "admin";
 
@@ -148,8 +151,24 @@ export default function MovementsPage({ profile, syncIndicator }) {
     });
   }, [rows, search, date, source]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, date, source]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   const latestMovement = rows[0] || null;
   const latestMoment = latestMovement ? formatMoment(latestMovement) : null;
+  const firstVisible = filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const lastVisible = Math.min(page * PAGE_SIZE, filtered.length);
 
   return (
     <>
@@ -166,36 +185,29 @@ export default function MovementsPage({ profile, syncIndicator }) {
 
       <details className="movement-options">
         <summary>Opciones</summary>
-      <details className="quick-movement-sync-card manual-sync-group">
-        <summary>Sincronización manual</summary>
-        <div className="movement-sync-copy">
-          <span className="eyebrow">Bancolombia</span>
-          <strong>Búsqueda por horas</strong>
-          <small>Busca exclusivamente alertas de Bancolombia recibidas durante la última 1, 3 o 6 horas exactas desde el momento del clic.</small>
-        </div>
-        <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
-          <button className="primary-button" onClick={() => synchronizeQuick(1)} disabled={!isAdmin || syncing || loading}>
-            <Icon name="refresh" size={18} /> {quickSyncHours === 1 ? "Buscando..." : "Búsqueda rápida"}
-          </button>
-          <button className="secondary-button" onClick={() => synchronizeQuick(3)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 3 ? "Buscando..." : "3 horas"}</button>
-          <button className="secondary-button" onClick={() => synchronizeQuick(6)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 6 ? "Buscando..." : "6 horas"}</button>
-        </div>
-      </details>
+        <div className="movement-options-grid">
+          <details className="movement-option-group">
+            <summary>Sincronización manual</summary>
+            <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
+              <button className="primary-button" onClick={() => synchronizeQuick(1)} disabled={!isAdmin || syncing || loading}>
+                <Icon name="refresh" size={17} /> {quickSyncHours === 1 ? "Buscando..." : "Búsqueda rápida"}
+              </button>
+              <button className="secondary-button" onClick={() => synchronizeQuick(3)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 3 ? "Buscando..." : "3 horas"}</button>
+              <button className="secondary-button" onClick={() => synchronizeQuick(6)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 6 ? "Buscando..." : "6 horas"}</button>
+            </div>
+          </details>
 
-      <details className="movement-range-sync manual-sync-range">
-        <summary>Sincronización por rango de fechas</summary>
-        <section className="movement-sync-card">
-          <div className="movement-sync-copy">
-            <strong>Búsqueda histórica</strong>
-            <small>Úsala para buscar movimientos de días anteriores.</small>
-          </div>
-          <label><span>Desde</span><input type="date" value={dateFrom} max={dateTo} onChange={(event) => setDateFrom(event.target.value)} /></label>
-          <label><span>Hasta</span><input type="date" value={dateTo} min={dateFrom} max={bogotaDay()} onChange={(event) => setDateTo(event.target.value)} /></label>
-          <button className="primary-button" onClick={synchronize} disabled={!isAdmin || syncing || loading || !dateFrom || !dateTo}>
-            <Icon name="refresh" size={18} /> {syncing ? "Sincronizando..." : "Sincronizar rango"}
-          </button>
-        </section>
-      </details>
+          <details className="movement-option-group">
+            <summary>Sincronización por rango de fechas</summary>
+            <div className="movement-range-controls">
+              <label><span>Desde</span><input type="date" value={dateFrom} max={dateTo} onChange={(event) => setDateFrom(event.target.value)} /></label>
+              <label><span>Hasta</span><input type="date" value={dateTo} min={dateFrom} max={bogotaDay()} onChange={(event) => setDateTo(event.target.value)} /></label>
+              <button className="primary-button" onClick={synchronize} disabled={!isAdmin || syncing || loading || !dateFrom || !dateTo}>
+                <Icon name="refresh" size={17} /> {syncing ? "Sincronizando..." : "Sincronizar"}
+              </button>
+            </div>
+          </details>
+        </div>
       </details>
       {!isAdmin ? <Alert tone="warning">Solo el Administrador puede iniciar la sincronización. Los Revisores sí pueden consultar los movimientos.</Alert> : null}
 
@@ -222,11 +234,20 @@ export default function MovementsPage({ profile, syncIndicator }) {
           <EmptyState icon="movements" title={rows.length ? "No hay coincidencias" : "No hay movimientos documentados"} description={rows.length ? "Cambia o limpia los filtros para volver a ver los registros." : "Usa el botón Sincronizar ahora para consultar las alertas de Bancolombia."} />
         ) : (
           <>
-            <div className="results-caption">{filtered.length} movimiento{filtered.length === 1 ? "" : "s"} · ordenados del más reciente al más antiguo</div>
+            <div className="results-caption">
+              <span>{filtered.length} movimiento{filtered.length === 1 ? "" : "s"} · {firstVisible}-{lastVisible}</span>
+              {totalPages > 1 ? (
+                <div className="pagination-controls" aria-label="Paginación de movimientos">
+                  <button className="icon-button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} aria-label="Página anterior" title="Página anterior"><Icon name="chevron-left" size={18} /></button>
+                  <span>Página {page} de {totalPages}</span>
+                  <button className="icon-button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages} aria-label="Página siguiente" title="Página siguiente"><Icon name="chevron-right" size={18} /></button>
+                </div>
+              ) : null}
+            </div>
             <div className="data-table-wrap">
               <table className="data-table movement-table">
                 <thead><tr><th>Fecha y hora</th><th>Tipo y origen</th><th>Detalle</th><th>Referencia</th><th className="amount-column">Valor</th></tr></thead>
-                <tbody>{filtered.map((row) => {
+                <tbody>{paginated.map((row) => {
                   const moment = formatMoment(row);
                   return <tr key={row.id} className={row.id === latestMovement?.id ? "latest-row" : ""}>
                     <td data-label="Fecha y hora"><div className="movement-datetime"><strong>{moment.date}</strong><small>{moment.time}</small></div></td>

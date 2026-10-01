@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "empleados-icon.svg", "empleados-icon-192.png", "empleados-icon-512.png", "manifest.webmanifest", "empleados.webmanifest"],
+      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "manifest.webmanifest"],
       manifest: false,
       workbox: {
         navigateFallback: "/index.html",

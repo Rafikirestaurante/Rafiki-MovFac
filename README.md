@@ -4,15 +4,14 @@
 
 ## Versión actual
 
-**1.4.1 — Fase 4A.1: automatización, PWA y alertas Bancolombia**
+**1.5.0 — Fase 5: interfaz compacta y movimientos paginados**
 
-Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki Empleados** tres ventanas de consulta Bancolombia: 1 hora, 3 horas y 6 horas exactas hacia atrás desde el momento del clic. Las búsquedas siguen limitadas al remitente oficial de alertas Bancolombia, mantienen control de duplicados y conservan para revisión cualquier formato no reconocido.
+Esta revisión conserva la automatización, la PWA unificada y la trazabilidad Bancolombia de la Fase 4B. Retira la vista pública de empleados, compacta la navegación administrativa y organiza los movimientos en páginas de 50 registros.
 
 ## Funciones disponibles
 
 - React 18 + Vite con diseño adaptable a celular y computador.
 - PWA principal instalable como **Rafiki MF**.
-- PWA pública independiente **Rafiki Empleados** en `/empleados`.
 - Autenticación Supabase por correo y contraseña.
 - Roles internos `admin` y `reviewer`.
 - La primera cuenta registrada queda como Administrador.
@@ -20,7 +19,7 @@ Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki
 - OAuth 2.0 de Gmail con permiso de solo lectura.
 - Refresh token cifrado mediante AES-256-GCM.
 - Diagnóstico técnico de conexión con Gmail y Edge Functions.
-- Búsqueda Bancolombia por ventanas exactas: 1 hora (hasta 20 alertas), 3 horas (hasta 60) y 6 horas (hasta 120), disponible en Movimientos y `/empleados`.
+- Búsqueda Bancolombia por ventanas exactas: 1 hora (hasta 20 alertas), 3 horas (hasta 60) y 6 horas (hasta 120), disponible en Movimientos.
 - Sincronización histórica de movimientos por rango de fechas.
 - Extracción de ingresos, transferencias y compras con tarjeta de Bancolombia.
 - Reconocimiento de pagos Bancolombia con tipo intermedio, por ejemplo `Recibiste un pago PROVEEDOR de REDEBAN SA por $1.4.19.00`.
@@ -31,10 +30,8 @@ Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki
 - Extracción de proveedor, NIT, número, CUFE, fechas, subtotal, impuestos y total.
 - Control de duplicados de movimientos y documentos.
 - Registro incompleto cuando existe PDF sin XML interpretable.
-- Acceso restringido para empleados a los cinco movimientos más recientes.
 - Confirmaciones de pagos almacenadas de forma separada, sin modificar el movimiento bancario.
 - Registro de sincronizaciones, errores y auditoría documental.
-- `/empleados` puede solicitar búsquedas de 1, 3 o 6 horas sin espera artificial entre ejecuciones; se conserva únicamente el bloqueo de una sincronización global que ya esté en ejecución.
 - Las alertas recibidas desde `alertasynotificaciones@an.notificacionesbancolombia.com` que no coinciden con una regla conocida permanecen registradas en `gmail_sync_candidates` para revisión, sin crear un movimiento financiero falso.
 - Inicio incluye un calendario mensual navegable con movimientos, facturas y alertas Bancolombia no reconocidas por día.
 
@@ -71,8 +68,9 @@ Ejecuta en Supabase SQL Editor, respetando este orden:
 5. `supabase/2026-07-17-fase2b2-acceso-publico-empleados.sql`
 6. `supabase/2026-07-17-fase2b32-simplificacion-operativa.sql`
 7. `supabase/2026-07-17-fase2d-facturacion-electronica.sql`
+8. `supabase/2026-10-01-fase4a-alertas-pwa.sql`
 
-La Fase 4A incorpora índices para alertas Bancolombia no reconocidas. La 3A.3 amplía únicamente la ventana de búsqueda rápida y reutiliza la estructura existente.
+La Fase 4A incorpora índices para alertas Bancolombia no reconocidas. La Fase 5 añade navegación compacta y paginación de movimientos sin cambiar la estructura documental.
 
 ## Secretos de Supabase Edge Functions
 
@@ -196,8 +194,6 @@ Los secretos de Gmail deben permanecer exclusivamente en Supabase Edge Functions
 - `docs/FASE-3A3-BUSQUEDAS-1-3-6-HORAS.md`
 - `docs/CRONOGRAMA-PROYECTO.md`
 
-## Próxima etapa recomendada
+## Fase 5
 
-La siguiente subfase prevista es la **Fase 3B — integración real de Nequi**, manteniendo Bancolombia, facturación electrónica y acceso de empleados sin cambios funcionales.
-
-- `supabase/2026-10-01-fase4a-alertas-pwa.sql`
+La aplicación usa un menú lateral desplegable mediante el botón de menú. En Movimientos, Opciones agrupa la sincronización manual y la sincronización por rango de fechas, mientras que el listado presenta 50 movimientos por página.

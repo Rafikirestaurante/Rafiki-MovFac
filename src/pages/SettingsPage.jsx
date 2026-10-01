@@ -11,7 +11,6 @@ import {
   getRecentSyncRuns,
   edgeErrorDetails
 } from "../services/gmailIntegrationService.js";
-import { getEmployeeAccessSettings, saveEmployeeAccessSettings } from "../services/employeeAccessService.js";
 import { APP_PHASE, APP_PHASE_DESCRIPTION, APP_PHASE_TITLE, APP_VERSION } from "../config/appMetadata.js";
 
 function formatDate(value) {
@@ -41,13 +40,6 @@ export default function SettingsPage({ profile }) {
   const [lastSync, setLastSync] = useState(null);
   const [diagnostics, setDiagnostics] = useState(null);
   const [communicationIssues, setCommunicationIssues] = useState([]);
-  const [employeeAccess, setEmployeeAccess] = useState({ configured: false, enabled: false, username: "empleados", password_configured: false, public_url: "" });
-  const [employeeUsername, setEmployeeUsername] = useState("empleados");
-  const [employeePassword, setEmployeePassword] = useState("");
-  const [employeeEnabled, setEmployeeEnabled] = useState(false);
-  const [employeeAction, setEmployeeAction] = useState("");
-  const [employeeMessage, setEmployeeMessage] = useState("");
-  const [employeeTone, setEmployeeTone] = useState("info");
 
   const isAdmin = profile?.role === "admin";
   const connection = status.connection;
@@ -69,12 +61,11 @@ export default function SettingsPage({ profile }) {
     setLoading(true);
     const results = await Promise.allSettled([
       getGmailConnectionStatus(),
-      getRecentSyncRuns(1),
-      getEmployeeAccessSettings()
+      getRecentSyncRuns(1)
     ]);
 
     const issues = [];
-    const [gmailResult, runsResult, publicResult] = results;
+    const [gmailResult, runsResult] = results;
 
     if (gmailResult.status === "fulfilled") {
       setStatus({ ...gmailResult.value, unavailable: false, load_error: null });
@@ -96,15 +87,6 @@ export default function SettingsPage({ profile }) {
         browser_origin: window.location.origin,
         online: navigator.onLine
       });
-    }
-
-    if (publicResult.status === "fulfilled") {
-      const publicAccess = publicResult.value;
-      setEmployeeAccess(publicAccess);
-      setEmployeeUsername(publicAccess.username || "empleados");
-      setEmployeeEnabled(Boolean(publicAccess.enabled));
-    } else {
-      issues.push(edgeErrorDetails(publicResult.reason, "employee-access-admin"));
     }
 
     setCommunicationIssues(issues);
@@ -228,35 +210,6 @@ export default function SettingsPage({ profile }) {
       setMessage(error.message || "No se pudo sincronizar Gmail.");
     } finally {
       setAction("");
-    }
-  }
-
-  async function savePublicEmployeeAccess() {
-    setEmployeeAction("save");
-    setEmployeeMessage("");
-    try {
-      const data = await saveEmployeeAccessSettings({ username: employeeUsername, password: employeePassword, enabled: employeeEnabled });
-      setEmployeeAccess((current) => ({ ...current, ...data }));
-      setEmployeePassword("");
-      setEmployeeTone("success");
-      setEmployeeMessage(`Acceso público ${data.enabled ? "activado" : "guardado como desactivado"}. Las sesiones anteriores fueron cerradas.`);
-    } catch (error) {
-      setEmployeeTone("danger");
-      setEmployeeMessage(error.message || "No se pudo guardar el acceso para empleados.");
-    } finally {
-      setEmployeeAction("");
-    }
-  }
-
-  async function copyEmployeeLink() {
-    const link = employeeAccess.public_url || `${window.location.origin}/empleados`;
-    try {
-      await navigator.clipboard.writeText(link);
-      setEmployeeTone("success");
-      setEmployeeMessage("Enlace público copiado.");
-    } catch {
-      setEmployeeTone("warning");
-      setEmployeeMessage(`Copia manualmente este enlace: ${link}`);
     }
   }
 
@@ -419,33 +372,6 @@ export default function SettingsPage({ profile }) {
           <div><span>Errores</span><strong>{lastSync.errors_count || 0}</strong></div>
         </div> : null}
         {statusUnavailable ? <Alert tone="danger">La sincronización está bloqueada porque no se pudo comprobar la comunicación con las Edge Functions. Ejecuta “Diagnosticar comunicación”.</Alert> : !canAttemptGmail ? <Alert tone="warning">Conecta Gmail antes de ejecutar una sincronización.</Alert> : null}
-      </section>
-
-      <section className="panel-card employee-access-settings-card">
-        <div className="panel-heading">
-          <div><span className="eyebrow">Acceso restringido</span><h2>Enlace público para empleados</h2></div>
-          <Badge tone={employeeEnabled ? "success" : "neutral"}>{employeeEnabled ? "Activo" : "Desactivado"}</Badge>
-        </div>
-        <p className="panel-description">Permite consultar solamente los cinco movimientos más recientes, buscar alertas Bancolombia de la última 1, 3 o 6 horas, confirmar ingresos e instalar una PWA independiente para empleados.</p>
-        {employeeMessage ? <Alert tone={employeeTone}>{employeeMessage}</Alert> : null}
-        <div className="employee-access-form">
-          <label><span>Nombre de acceso</span><input value={employeeUsername} maxLength={40} onChange={(event) => setEmployeeUsername(event.target.value.toLowerCase())} placeholder="empleados" disabled={!isAdmin || Boolean(employeeAction)} /></label>
-          <label><span>{employeeAccess.password_configured ? "Nueva contraseña (opcional)" : "Contraseña"}</span><input type="password" value={employeePassword} maxLength={72} onChange={(event) => setEmployeePassword(event.target.value)} placeholder={employeeAccess.password_configured ? "Déjala vacía para conservar la actual" : "Mínimo 4 caracteres"} disabled={!isAdmin || Boolean(employeeAction)} /></label>
-          <label className="employee-access-toggle"><input type="checkbox" checked={employeeEnabled} onChange={(event) => setEmployeeEnabled(event.target.checked)} disabled={!isAdmin || Boolean(employeeAction)} /><span>Habilitar acceso público</span></label>
-        </div>
-        <div className="employee-public-link-box"><span>Enlace para compartir</span><strong>{employeeAccess.public_url || `${window.location.origin}/empleados`}</strong></div>
-        <div className="button-row">
-          <button className="primary-button" onClick={savePublicEmployeeAccess} disabled={!isAdmin || Boolean(employeeAction) || !employeeUsername || (!employeeAccess.password_configured && employeePassword.length < 4)}><Icon name="shield" size={18} /> {employeeAction === "save" ? "Guardando..." : "Guardar acceso"}</button>
-          <button className="secondary-button" onClick={copyEmployeeLink} disabled={!employeeAccess.public_url && !window.location.origin}><Icon name="check" size={18} /> Copiar enlace</button>
-          <a className="secondary-button employee-link-button" href="/empleados" target="_blank" rel="noreferrer">Abrir vista pública</a>
-        </div>
-        <div className="employee-access-restrictions">
-          <div><Icon name="check" size={16} /><span>Solo cinco movimientos</span></div>
-          <div><Icon name="check" size={16} /><span>Sin acceso a Gmail ni facturas</span></div>
-          <div><Icon name="check" size={16} /><span>Sesión temporal de 8 horas</span></div>
-          <div><Icon name="check" size={16} /><span>PWA instalable e independiente</span></div>
-        </div>
-        <Alert tone="warning">El nombre y la contraseña son compartidos. Al cambiar cualquiera de los dos, todas las sesiones públicas abiertas se cierran automáticamente.</Alert>
       </section>
 
       {confirmDisconnect ? (

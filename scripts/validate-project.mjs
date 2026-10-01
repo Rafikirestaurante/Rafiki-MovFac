@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const expectedVersion = "1.4.1";
-const expectedPhase = "Fase 4A.1";
+const expectedVersion = "1.5.0";
+const expectedPhase = "Fase 5";
 
 const migrations = [
   "supabase/2026-07-14-fase1a-base-independiente.sql",
@@ -41,21 +41,16 @@ const required = [
   "src/main.jsx",
   "src/config/appMetadata.js",
   "src/pages/SettingsPage.jsx",
-  "src/pages/EmployeePublicPage.jsx",
   "src/pages/InvoicesPage.jsx",
   "src/pages/MovementsPage.jsx",
   "src/services/gmailIntegrationService.js",
-  "src/services/employeeAccessService.js",
   "src/services/invoiceService.js",
   "src/services/movementService.js",
   "src/services/dashboardService.js",
   "src/utils/calendar.js",
   "public/manifest.webmanifest",
-  "public/empleados.webmanifest",
   "public/icon-192.png",
   "public/icon-512.png",
-  "public/empleados-icon-192.png",
-  "public/empleados-icon-512.png",
   "supabase/config.toml",
   "supabase/functions/.env.example",
   "supabase/functions/_shared/bancolombia.ts",
@@ -118,7 +113,7 @@ requireText(settings, "APP_VERSION", "SettingsPage.jsx");
 requireText(settings, "APP_PHASE_TITLE", "SettingsPage.jsx");
 
 const readme = read("README.md");
-requireText(readme, `**${expectedVersion} — ${expectedPhase}: automatización, PWA y alertas Bancolombia**`, "README.md");
+requireText(readme, `**${expectedVersion} — ${expectedPhase}: interfaz compacta y movimientos paginados**`, "README.md");
 requireText(readme, "npm install --package-lock=false", "README.md");
 requireText(readme, "La Fase 4A incorpora índices para alertas Bancolombia no reconocidas", "README.md");
 for (const migration of migrations) requireText(readme, migration, "README.md");
@@ -182,15 +177,10 @@ const supabaseConfig = read("supabase/config.toml");
 requireText(supabaseConfig, "[functions.gmail-oauth-callback]", "supabase/config.toml");
 requireText(supabaseConfig, "verify_jwt = false", "supabase/config.toml");
 
-const employeePage = read("src/pages/EmployeePublicPage.jsx");
-if (employeePage.includes("una vez por minuto")) fail("EmployeePublicPage todavía menciona el límite de un minuto.");
-for (const token of ["synchronize(1)", "synchronize(3)", "synchronize(6)", "Búsqueda rápida", "3 horas", "6 horas"]) requireText(employeePage, token, "EmployeePublicPage.jsx");
 const movementsPage = read("src/pages/MovementsPage.jsx");
-for (const token of ["synchronizeQuick(1)", "synchronizeQuick(3)", "synchronizeQuick(6)", "Búsqueda rápida", "3 horas", "6 horas"]) requireText(movementsPage, token, "MovementsPage.jsx");
+for (const token of ["synchronizeQuick(1)", "synchronizeQuick(3)", "synchronizeQuick(6)", "Búsqueda rápida", "3 horas", "6 horas", "PAGE_SIZE = 50", "Página siguiente"]) requireText(movementsPage, token, "MovementsPage.jsx");
 const gmailService = read("src/services/gmailIntegrationService.js");
 requireText(gmailService, 'quick_hours: hours', "gmailIntegrationService.js");
-const employeeService = read("src/services/employeeAccessService.js");
-requireText(employeeService, 'quick_hours: hours', "employeeAccessService.js");
 const syncNow = read("supabase/functions/gmail-sync-now/index.ts");
 if (syncNow.includes("sync_rate_limited") || syncNow.includes("wait_seconds: 60")) fail("gmail-sync-now todavía contiene el rate limit público de un minuto.");
 for (const token of ["requires_review: true", "unsupported_notification", "unrecognized_reason", "[1, 3, 6].includes(requestedQuickHours)", "quickHours === 6 ? 120 : quickHours === 3 ? 60 : 20", "after:${Math.floor(quickStart.getTime() / 1000)}"]) requireText(syncNow, token, "gmail-sync-now");
@@ -213,9 +203,8 @@ const dashboard = read("src/pages/DashboardPage.jsx");
 for (const token of ["Calendario de actividad", "Alertas Bancolombia no reconocidas", "getDashboardMonthData"]) requireText(dashboard, token, "DashboardPage.jsx");
 
 const mainManifest = JSON.parse(read("public/manifest.webmanifest"));
-const employeeManifest = JSON.parse(read("public/empleados.webmanifest"));
 if (mainManifest.id !== "/" || mainManifest.start_url !== "/") fail("El manifiesto principal tiene una ruta inesperada.");
-if (employeeManifest.id !== "/empleados" || employeeManifest.start_url !== "/empleados") fail("El manifiesto de empleados tiene una ruta inesperada.");
+if (mainManifest.shortcuts?.some((shortcut) => String(shortcut.url || "").includes("/empleados"))) fail("El manifiesto principal todavía expone la vista de empleados.");
 
 console.log(`Validación correcta: Rafiki MF ${expectedVersion} / ${expectedPhase}.`);
 console.log(`Estructura: ${migrations.length} migraciones, ${edgeFunctions.length} Edge Functions y documentación vigente.`);
