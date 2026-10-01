@@ -668,6 +668,7 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 .sync-dot.active { background:#e0a321; animation: rafiki-pulse 1s infinite; }
 @keyframes rafiki-pulse { 50% { opacity:.35; } }
 .auto-sync-control { display:flex; align-items:center; gap:8px; margin:0 0 14px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:11px; }
+.auto-sync-control-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .auto-sync-control.enabled { border-color:#b8dec1; background:#f2fbf4; color:#236b35; }
 .auto-sync-control.disabled { border-color:#efc0c0; background:#fff6f6; color:#a33434; }
 .auto-sync-control .sync-dot { background:#d33b3b; }
@@ -686,9 +687,16 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 .auto-sync-control button { margin-left:auto; border:0; border-radius:7px; padding:5px 9px; cursor:pointer; font-size:10px; font-weight:800; color:#fff; background:#a33434; }
 .auto-sync-control.enabled button { background:#28783c; }
 @media (min-width: 900px) { .app-surface-tabs { margin:18px 14px 22px; padding:5px; gap:8px; } .app-surface-tab { padding:11px 8px; font-size:12px; } }
+@media (max-width: 680px) { .auto-sync-control-row { grid-template-columns:1fr; gap:0; } }
 .module-sync-indicator { display:flex; align-items:center; gap:8px; margin:0 0 12px; padding:8px 11px; border-radius:9px; font-size:11px; border:1px solid #efc0c0; background:#fff6f6; color:#a33434; }
 .module-sync-indicator.on { border-color:#b8dec1; background:#f2fbf4; color:#236b35; }
 .module-sync-indicator.syncing { border-color:#ead29d; background:#fffaf0; color:#916d10; }
 .module-sync-indicator .sync-dot { width:8px; height:8px; border-radius:50%; background:#d33b3b; }
 .module-sync-indicator.on .sync-dot { background:#29a34a; }
 .module-sync-indicator.syncing .sync-dot { background:#e0a321; animation:rafiki-pulse 1s infinite; }
+.employee-public-header { position:sticky; top:0; z-index:20; }
+.employee-fixed-tabs { display:flex; gap:4px; margin-right:12px; padding:3px; border-radius:9px; background:rgba(255,255,255,.12); }
+.employee-fixed-tabs a { padding:6px 9px; border-radius:7px; color:#c9d8e5; text-decoration:none; font-size:10px; font-weight:800; white-space:nowrap; }
+.employee-fixed-tabs a.active { background:#fff; color:#17354d; }
+.manual-sync-group, .employee-manual-sync { border:1px solid var(--line); border-radius:10px; padding:0 12px 12px; }
+.manual-sync-group > summary, .employee-manual-sync > summary { cursor:pointer; padding:11px 0; font-weight:800; color:var(--ink); }

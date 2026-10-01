@@ -194,6 +194,7 @@ export default function EmployeePublicPage() {
   return (
     <main className="employee-public-page">
       <header className="employee-public-header">
+        <div className="employee-fixed-tabs"><a href="/">Vista normal</a><a className="active" href="/empleados">Empleados</a></div>
         <div className="employee-public-brand"><span>R</span><div><strong>Rafiki Empleados</strong><small>Pagos recientes</small></div></div>
         <div className="employee-header-actions">
           {!installed && installPrompt ? <button className="secondary-button" onClick={installEmployeeApp}><Icon name="install" size={17} /> Instalar</button> : null}
@@ -203,17 +204,18 @@ export default function EmployeePublicPage() {
 
       <section className="employee-public-content">
         <div className="employee-public-title">
-          <div><span className="eyebrow">Vista limitada</span><h1>Últimos 5 movimientos</h1><p>Solo se muestran los registros más recientes. Los pagos recibidos pueden confirmarse una sola vez.</p></div>
+          <div><span className="eyebrow">Movimientos del día</span><h1>Movimientos de hoy</h1><p>Se muestran todos los movimientos registrados durante el día. Los pagos recibidos pueden confirmarse una sola vez.</p></div>
         </div>
 
-        <section className="employee-quick-sync-card">
+        <details className="employee-quick-sync-card employee-manual-sync" open>
+          <summary>Sincronización manual</summary>
           <div className="movement-sync-copy"><strong>Búsqueda Bancolombia</strong><small>Revisa exclusivamente las alertas recibidas durante la última 1, 3 o 6 horas exactas desde el momento del clic.</small></div>
           <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
             <button className="primary-button" onClick={() => synchronize(1)} disabled={Boolean(action) || loading}><Icon name="refresh" size={18} /> {action === "sync-1" ? "Buscando..." : "Búsqueda rápida"}</button>
             <button className="secondary-button" onClick={() => synchronize(3)} disabled={Boolean(action) || loading}>{action === "sync-3" ? "Buscando..." : "3 horas"}</button>
             <button className="secondary-button" onClick={() => synchronize(6)} disabled={Boolean(action) || loading}>{action === "sync-6" ? "Buscando..." : "6 horas"}</button>
           </div>
-        </section>
+        </details>
 
         {message ? <Alert tone={tone}>{message}</Alert> : null}
         {latest ? <div className="employee-latest-banner"><span>Último movimiento actualizado</span><strong>{formatMoment(latest.transaction_at)}</strong></div> : null}

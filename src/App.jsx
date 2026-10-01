@@ -24,7 +24,8 @@ export default function App() {
   const [session, setSession] = useState(undefined);
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(() => localStorage.getItem("rafiki_auto_sync_enabled") !== "false");
+  const [movementsAutoEnabled, setMovementsAutoEnabled] = useState(() => localStorage.getItem("rafiki_movements_auto_sync") !== "false");
+  const [invoicesAutoEnabled, setInvoicesAutoEnabled] = useState(() => localStorage.getItem("rafiki_invoices_auto_sync") === "true");
   const [autoSync, setAutoSync] = useState({ movements: { active: false, lastRun: null, message: "" }, invoices: { active: false, lastRun: null, message: "" } });
   const [activePage, setActivePage] = useState(() => {
     const requested = window.location.hash.replace("#", "") || "inicio";
@@ -54,7 +55,7 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
-    if (!session || !profile || profile.role !== "admin" || !autoSyncEnabled) return undefined;
+    if (!session || !profile || profile.role !== "admin") return undefined;
     let disposed = false;
     let movementRunning = false;
     let invoiceRunning = false;
@@ -84,14 +85,19 @@ export default function App() {
       } catch { if (!disposed) setAutoSync((v) => ({ ...v, invoices: { active: false, lastRun: new Date(), message: "Error de sincronización" } })); }
       finally { invoiceRunning = false; }
     };
-    syncMovements(); syncInvoices();
-    const movementTimer = window.setInterval(syncMovements, 30000);
-    const invoiceTimer = window.setInterval(syncInvoices, 30000);
+    if (movementsAutoEnabled) syncMovements();
+    if (invoicesAutoEnabled) syncInvoices();
+    const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, 15000) : null;
+    const invoiceTimer = invoicesAutoEnabled ? window.setInterval(syncInvoices, 60000) : null;
     return () => { disposed = true; window.clearInterval(movementTimer); window.clearInterval(invoiceTimer); };
-  }, [session, profile, autoSyncEnabled]);
+  }, [session, profile, movementsAutoEnabled, invoicesAutoEnabled]);
 
-  function toggleAutoSync() {
-    setAutoSyncEnabled((value) => { const next = !value; localStorage.setItem("rafiki_auto_sync_enabled", String(next)); return next; });
+  function toggleMovementsAutoSync() {
+    setMovementsAutoEnabled((value) => { const next = !value; localStorage.setItem("rafiki_movements_auto_sync", String(next)); return next; });
+  }
+
+  function toggleInvoicesAutoSync() {
+    setInvoicesAutoEnabled((value) => { const next = !value; localStorage.setItem("rafiki_invoices_auto_sync", String(next)); return next; });
   }
 
   function navigate(page) {
@@ -112,7 +118,7 @@ export default function App() {
 
   const Page = pages[activePage] || DashboardPage;
   return (
-    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ ...autoSync, enabled: autoSyncEnabled }} onToggleAutoSync={toggleAutoSync}>
+    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, enabled: movementsAutoEnabled }, invoices: { ...autoSync.invoices, enabled: invoicesAutoEnabled } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync}>
       <Page profile={profile} onNavigate={navigate} syncIndicator={activePage === "movimientos" ? autoSync.movements : activePage === "facturas" ? autoSync.invoices : null} />
     </AppShell>
   );

@@ -164,7 +164,8 @@ export default function MovementsPage({ profile, syncIndicator }) {
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {syncMessage ? <Alert tone={syncTone}>{syncMessage}</Alert> : null}
 
-      <section className="quick-movement-sync-card">
+      <details className="quick-movement-sync-card manual-sync-group">
+        <summary>Sincronización manual</summary>
         <div className="movement-sync-copy">
           <span className="eyebrow">Bancolombia</span>
           <strong>Búsqueda por horas</strong>
@@ -177,9 +178,9 @@ export default function MovementsPage({ profile, syncIndicator }) {
           <button className="secondary-button" onClick={() => synchronizeQuick(3)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 3 ? "Buscando..." : "3 horas"}</button>
           <button className="secondary-button" onClick={() => synchronizeQuick(6)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 6 ? "Buscando..." : "6 horas"}</button>
         </div>
-      </section>
+      </details>
 
-      <details className="movement-range-sync">
+      <details className="movement-range-sync manual-sync-range">
         <summary>Sincronización por rango de fechas</summary>
         <section className="movement-sync-card">
           <div className="movement-sync-copy">

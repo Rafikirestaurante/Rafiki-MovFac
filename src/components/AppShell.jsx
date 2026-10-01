@@ -9,7 +9,7 @@ const navigation = [
   { id: "configuracion", label: "Configuración", icon: "settings" }
 ];
 
-export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync, onToggleAutoSync }) {
+export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync, onToggleMovements, onToggleInvoices }) {
   const [open, setOpen] = useState(false);
   const roleLabel = profile?.role === "admin" ? "Administrador" : "Revisor";
 
@@ -65,7 +65,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <div className="mobile-brand"><span>R</span> Rafiki Finanzas</div>
           <div className="avatar small">{String(profile?.display_name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
         </div>
-        <div className="content-wrap"><div className={`auto-sync-control ${autoSync?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Sincronización automática</strong><span>{autoSync?.enabled ? "Activada" : "Desactivada"}</span><button onClick={onToggleAutoSync}>{autoSync?.enabled ? "Desactivar" : "Activar"}</button></div>{autoSync?.active ? <div className="auto-sync-status" role="status">Revisando correos automáticamente...</div> : null}{children}</div>
+        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "Sincronizando..." : autoSync?.movements?.enabled ? "Cada 15 segundos" : "Desactivada"}</span><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "Sincronizando..." : autoSync?.invoices?.enabled ? "Cada 60 segundos" : "Desactivada"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
       </main>
 
       <nav className="bottom-nav">

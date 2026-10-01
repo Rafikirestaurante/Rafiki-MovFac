@@ -20,11 +20,13 @@ function cleanNote(value: unknown): string {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 160);
 }
 
-async function latestFive(client: ReturnType<typeof adminClient>) {
+async function latestToday(client: ReturnType<typeof adminClient>) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const { data, error } = await client.from("financial_movements")
     .select("id,source,movement_type,transaction_at,transaction_date,detail,amount_cop")
     .order("transaction_at", { ascending: false })
-    .limit(5);
+    .eq("transaction_date", today)
+    .limit(300);
   if (error) throw new Error(`No se pudieron consultar los movimientos: ${error.message}`);
   const rows = data || [];
   const ids = rows.map((row) => row.id);
@@ -104,7 +106,7 @@ Deno.serve(async (request: Request) => {
     const { session } = await requireEmployeeSession(request, client);
 
     if (action === "list") {
-      const movements = await latestFive(client);
+      const movements = await latestToday(client);
       await client.from("employee_public_access_log").insert({
         action: "list_movements",
         success: true,
@@ -112,7 +114,7 @@ Deno.serve(async (request: Request) => {
         access_username: session.username,
         detail: { count: movements.length, phase: "2B.3.4" }
       });
-      return jsonResponse(request, { movements, limit: 5, username: session.username });
+      return jsonResponse(request, { movements, limit: movements.length, username: session.username });
     }
 
     if (action === "confirm") {
@@ -122,7 +124,7 @@ Deno.serve(async (request: Request) => {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(movementId)) throw new Error("Movimiento inválido.");
       if (employeeName.length < 2) throw new Error("Escribe el nombre de la persona que confirma.");
 
-      const movements = await latestFive(client);
+      const movements = await latestToday(client);
       const movement = movements.find((row) => row.id === movementId);
       if (!movement) throw new Error("Solo se pueden confirmar movimientos visibles entre los últimos cinco.");
       if (movement.movement_type !== "income") throw new Error("Solo los ingresos pueden confirmarse como pagos recibidos.");
