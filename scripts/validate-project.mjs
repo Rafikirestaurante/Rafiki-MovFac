@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const expectedVersion = "1.3.4";
-const expectedPhase = "Fase 3A.3";
+const expectedVersion = "1.4.0";
+const expectedPhase = "Fase 4A";
 
 const migrations = [
   "supabase/2026-07-14-fase1a-base-independiente.sql",
@@ -12,7 +12,8 @@ const migrations = [
   "supabase/2026-07-16-fase2b1-fecha-hora-sincronizacion-movimientos.sql",
   "supabase/2026-07-17-fase2b2-acceso-publico-empleados.sql",
   "supabase/2026-07-17-fase2b32-simplificacion-operativa.sql",
-  "supabase/2026-07-17-fase2d-facturacion-electronica.sql"
+  "supabase/2026-07-17-fase2d-facturacion-electronica.sql",
+  "supabase/2026-10-01-fase4a-alertas-pwa.sql"
 ];
 
 const edgeFunctions = [
@@ -117,9 +118,9 @@ requireText(settings, "APP_VERSION", "SettingsPage.jsx");
 requireText(settings, "APP_PHASE_TITLE", "SettingsPage.jsx");
 
 const readme = read("README.md");
-requireText(readme, `**${expectedVersion} — ${expectedPhase}: búsquedas Bancolombia de 1, 3 y 6 horas**`, "README.md");
+requireText(readme, `**${expectedVersion} — ${expectedPhase}: automatización, PWA y alertas Bancolombia**`, "README.md");
 requireText(readme, "npm install --package-lock=false", "README.md");
-requireText(readme, "Las Fases 3A.1, 3A.2 y 3A.3 no requieren migraciones SQL nuevas", "README.md");
+requireText(readme, "La Fase 4A incorpora índices para alertas Bancolombia no reconocidas", "README.md");
 for (const migration of migrations) requireText(readme, migration, "README.md");
 for (const functionName of edgeFunctions) requireText(readme, `\`${functionName}\``, "README.md");
 
@@ -172,9 +173,9 @@ for (const token of [
   "create or replace function public.handle_new_app_user()"
 ]) requireText(baseSql, token, migrations[0]);
 
-const invoiceSql = read(migrations.at(-1));
+const invoiceSql = read("supabase/2026-07-17-fase2d-facturacion-electronica.sql");
 for (const token of ["document_key", "source_file_type", "electronic_invoices_document_key_unique"]) {
-  requireText(invoiceSql, token, migrations.at(-1));
+  requireText(invoiceSql, token, "supabase/2026-07-17-fase2d-facturacion-electronica.sql");
 }
 
 const supabaseConfig = read("supabase/config.toml");

@@ -4,7 +4,7 @@
 
 ## Versión actual
 
-**1.3.4 — Fase 3A.3: búsquedas Bancolombia de 1, 3 y 6 horas**
+**1.4.0 — Fase 4A: automatización, PWA y alertas Bancolombia**
 
 Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki Empleados** tres ventanas de consulta Bancolombia: 1 hora, 3 horas y 6 horas exactas hacia atrás desde el momento del clic. Las búsquedas siguen limitadas al remitente oficial de alertas Bancolombia, mantienen control de duplicados y conservan para revisión cualquier formato no reconocido.
 
@@ -72,7 +72,7 @@ Ejecuta en Supabase SQL Editor, respetando este orden:
 6. `supabase/2026-07-17-fase2b32-simplificacion-operativa.sql`
 7. `supabase/2026-07-17-fase2d-facturacion-electronica.sql`
 
-Las Fases 3A.1, 3A.2 y 3A.3 no requieren migraciones SQL nuevas. La 3A.3 amplía únicamente la ventana de búsqueda rápida y reutiliza la estructura existente.
+La Fase 4A incorpora índices para alertas Bancolombia no reconocidas. La 3A.3 amplía únicamente la ventana de búsqueda rápida y reutiliza la estructura existente.
 
 ## Secretos de Supabase Edge Functions
 
@@ -199,3 +199,5 @@ Los secretos de Gmail deben permanecer exclusivamente en Supabase Edge Functions
 ## Próxima etapa recomendada
 
 La siguiente subfase prevista es la **Fase 3B — integración real de Nequi**, manteniendo Bancolombia, facturación electrónica y acceso de empleados sin cambios funcionales.
+
+- `supabase/2026-10-01-fase4a-alertas-pwa.sql`

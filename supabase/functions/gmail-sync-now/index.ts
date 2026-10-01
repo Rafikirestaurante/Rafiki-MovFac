@@ -267,6 +267,8 @@ Deno.serve(async (request: Request) => {
                 extraction_result: "unsupported_notification",
                 requires_review: true,
                 unrecognized_reason: "No coincide con una regla de movimiento soportada.",
+                notification_text: content.text || fullMessage.snippet || message.snippet || "",
+                notification_snippet: fullMessage.snippet || message.snippet || "",
                 registered_at: new Date().toISOString(),
                 extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION
               }
