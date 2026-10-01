@@ -4,7 +4,7 @@
 
 ## Versión actual
 
-**1.4.0 — Fase 4A: automatización, PWA y alertas Bancolombia**
+**1.4.1 — Fase 4A.1: automatización, PWA y alertas Bancolombia**
 
 Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki Empleados** tres ventanas de consulta Bancolombia: 1 hora, 3 horas y 6 horas exactas hacia atrás desde el momento del clic. Las búsquedas siguen limitadas al remitente oficial de alertas Bancolombia, mantienen control de duplicados y conservan para revisión cualquier formato no reconocido.
 
@@ -23,7 +23,7 @@ Esta revisión parte de la versión 1.3.3 y añade en **Movimientos** y **Rafiki
 - Búsqueda Bancolombia por ventanas exactas: 1 hora (hasta 20 alertas), 3 horas (hasta 60) y 6 horas (hasta 120), disponible en Movimientos y `/empleados`.
 - Sincronización histórica de movimientos por rango de fechas.
 - Extracción de ingresos, transferencias y compras con tarjeta de Bancolombia.
-- Reconocimiento de pagos Bancolombia con tipo intermedio, por ejemplo `Recibiste un pago PROVEEDOR de REDEBAN SA por $114109.00`.
+- Reconocimiento de pagos Bancolombia con tipo intermedio, por ejemplo `Recibiste un pago PROVEEDOR de REDEBAN SA por $1.4.19.00`.
 - En estos pagos, `REDEBAN SA` se registra como detalle visible y `PROVEEDOR` se conserva como `payment_kind` dentro de los metadatos.
 - La hora explícita del movimiento (`a las 17:13`) tiene prioridad sobre una marca horaria visual anterior del correo (`5:14 p. m.`).
 - Normalización de fecha, hora, valor COP, detalle y referencia.

@@ -667,3 +667,28 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 .sync-dot { width:7px; height:7px; border-radius:50%; background:#72a37e; }
 .sync-dot.active { background:#e0a321; animation: rafiki-pulse 1s infinite; }
 @keyframes rafiki-pulse { 50% { opacity:.35; } }
+.auto-sync-control { display:flex; align-items:center; gap:8px; margin:0 0 14px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:11px; }
+.auto-sync-control.enabled { border-color:#b8dec1; background:#f2fbf4; color:#236b35; }
+.auto-sync-control.disabled { border-color:#efc0c0; background:#fff6f6; color:#a33434; }
+.auto-sync-control .sync-dot { background:#d33b3b; }
+.auto-sync-control.enabled .sync-dot { background:#29a34a; }
+.auto-sync-control button { margin-left:auto; border:0; border-radius:7px; padding:5px 9px; cursor:pointer; font-size:10px; font-weight:800; background:currentColor; color:#fff; }
+@media (min-width: 900px) { .app-surface-tabs { margin:18px 14px 22px; padding:5px; gap:8px; } .app-surface-tab { padding:11px 8px; font-size:12px; border:1px solid transparent; } .app-surface-tab:hover { border-color:#cbdbe5; background:#fff; } }
+.app-surface-tabs { display:flex; gap:5px; margin:12px 14px 18px; padding:4px; border:1px solid rgba(255,255,255,.14); border-radius:11px; background:rgba(255,255,255,.07); }
+.app-surface-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:5px; min-width:0; padding:8px 5px; border-radius:8px; color:#b9cddd; text-decoration:none; font-size:10px; font-weight:800; white-space:nowrap; }
+.app-surface-tab.active { background:#2d4b63; color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.1); }
+.app-surface-tab:hover { background:#35566f; color:#fff; }
+.auto-sync-control { display:flex; align-items:center; gap:8px; margin:0 0 14px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:11px; }
+.auto-sync-control.enabled { border-color:#b8dec1; background:#f2fbf4; color:#236b35; }
+.auto-sync-control.disabled { border-color:#efc0c0; background:#fff6f6; color:#a33434; }
+.auto-sync-control .sync-dot { width:8px; height:8px; border-radius:50%; background:#d33b3b; }
+.auto-sync-control.enabled .sync-dot { background:#29a34a; }
+.auto-sync-control button { margin-left:auto; border:0; border-radius:7px; padding:5px 9px; cursor:pointer; font-size:10px; font-weight:800; color:#fff; background:#a33434; }
+.auto-sync-control.enabled button { background:#28783c; }
+@media (min-width: 900px) { .app-surface-tabs { margin:18px 14px 22px; padding:5px; gap:8px; } .app-surface-tab { padding:11px 8px; font-size:12px; } }
+.module-sync-indicator { display:flex; align-items:center; gap:8px; margin:0 0 12px; padding:8px 11px; border-radius:9px; font-size:11px; border:1px solid #efc0c0; background:#fff6f6; color:#a33434; }
+.module-sync-indicator.on { border-color:#b8dec1; background:#f2fbf4; color:#236b35; }
+.module-sync-indicator.syncing { border-color:#ead29d; background:#fffaf0; color:#916d10; }
+.module-sync-indicator .sync-dot { width:8px; height:8px; border-radius:50%; background:#d33b3b; }
+.module-sync-indicator.on .sync-dot { background:#29a34a; }
+.module-sync-indicator.syncing .sync-dot { background:#e0a321; animation:rafiki-pulse 1s infinite; }

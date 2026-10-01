@@ -59,6 +59,14 @@ export default function DashboardPage({ onNavigate }) {
     return () => { active = false; };
   }, [monthKey]);
 
+  useEffect(() => {
+    const refresh = () => {
+      getDashboardMonthData(monthKey).then(setData).catch(() => {});
+    };
+    window.addEventListener("rafiki:data-updated", refresh);
+    return () => window.removeEventListener("rafiki:data-updated", refresh);
+  }, [monthKey]);
+
   const calendarDays = useMemo(() => buildMonthCalendar(monthKey), [monthKey]);
   const activity = useMemo(() => activityMap(data), [data]);
   const selectedMovements = useMemo(() => data.movements.filter((row) => row.transaction_date === selectedDate), [data.movements, selectedDate]);

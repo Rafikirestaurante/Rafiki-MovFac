@@ -9,7 +9,7 @@ const navigation = [
   { id: "configuracion", label: "Configuración", icon: "settings" }
 ];
 
-export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync }) {
+export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync, onToggleAutoSync }) {
   const [open, setOpen] = useState(false);
   const roleLabel = profile?.role === "admin" ? "Administrador" : "Revisor";
 
@@ -34,8 +34,6 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <a className="app-surface-tab active" href="/" role="tab" aria-selected="true"><Icon name="home" size={16} /> Vista normal</a>
           <a className="app-surface-tab" href="/empleados" role="tab" aria-selected="false"><Icon name="users" size={16} /> Empleados</a>
         </div>
-
-        <div className="app-surface-tabs" role="tablist" aria-label="Vistas de Rafiki"><a className="app-surface-tab active" href="/">Vista normal</a><a className="app-surface-tab" href="/empleados">Empleados</a></div>
 
         <nav className="side-nav">
           {navigation.map((item) => (
@@ -67,7 +65,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <div className="mobile-brand"><span>R</span> Rafiki Finanzas</div>
           <div className="avatar small">{String(profile?.display_name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
         </div>
-        <div className="content-wrap">{autoSync?.lastRun ? <div className="auto-sync-status" role="status"><span className={autoSync.active ? "sync-dot active" : "sync-dot"}></span><span>{autoSync.active ? "Revisando correos automáticamente..." : `Revisión automática: ${autoSync.message}`}</span></div> : null}{children}</div>
+        <div className="content-wrap"><div className={`auto-sync-control ${autoSync?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Sincronización automática</strong><span>{autoSync?.enabled ? "Activada" : "Desactivada"}</span><button onClick={onToggleAutoSync}>{autoSync?.enabled ? "Desactivar" : "Activar"}</button></div>{autoSync?.active ? <div className="auto-sync-status" role="status">Revisando correos automáticamente...</div> : null}{children}</div>
       </main>
 
       <nav className="bottom-nav">

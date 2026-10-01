@@ -24,7 +24,7 @@ function formatReceived(value) {
 }
 const typeLabels = { invoice: "Factura", credit_note: "Nota crédito", debit_note: "Nota débito", attached_document: "Documento adjunto", unknown: "Documento" };
 
-export default function InvoicesPage({ profile }) {
+export default function InvoicesPage({ profile, syncIndicator }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,7 +43,12 @@ export default function InvoicesPage({ profile }) {
     catch (loadError) { setError(loadError.message || "No se pudieron cargar las facturas."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const refresh = () => load();
+    window.addEventListener("rafiki:invoices-updated", refresh);
+    return () => window.removeEventListener("rafiki:invoices-updated", refresh);
+  }, []);
 
   async function runRecent() {
     setSyncing(true); setMessage("");
@@ -84,6 +89,7 @@ export default function InvoicesPage({ profile }) {
 
   return (
     <>
+      <div className={`module-sync-indicator ${syncIndicator?.active ? "syncing" : syncIndicator ? "on" : "off"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{syncIndicator?.active ? "Sincronizando..." : syncIndicator?.message || "Automática"}</span></div>
       <PageHeader eyebrow="Documentos electrónicos" title="Facturas" description="Consulta facturas recibidas en ZIP, XML y PDF. El XML es la fuente principal de extracción." action={<button className="secondary-button" onClick={load} disabled={loading || syncing}><Icon name="refresh" size={18} /> Actualizar</button>} />
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {message ? <Alert tone={tone}>{message}</Alert> : null}
