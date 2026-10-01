@@ -6,6 +6,10 @@
   "lang": "es-CO",
   "start_url": "/",
   "scope": "/",
+  "shortcuts": [
+    { "name": "Vista normal", "short_name": "Normal", "url": "/", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Vista empleados", "short_name": "Empleados", "url": "/empleados", "icons": [{ "src": "/empleados-icon-192.png", "sizes": "192x192" }] }
+  ],
   "display": "standalone",
   "orientation": "any",
   "theme_color": "#102a43",

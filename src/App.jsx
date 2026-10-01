@@ -7,6 +7,7 @@ import InvoicesPage from "./pages/InvoicesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import { Alert } from "./components/Ui.jsx";
 import { getCurrentProfile, getSession, onAuthStateChange, signOut } from "./services/authService.js";
+import { syncGmailQuick, syncInvoicesRecent } from "./services/gmailIntegrationService.js";
 
 const pages = {
   inicio: DashboardPage,
@@ -23,6 +24,7 @@ export default function App() {
   const [session, setSession] = useState(undefined);
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
+  const [autoSync, setAutoSync] = useState({ active: false, lastRun: null, message: "" });
   const [activePage, setActivePage] = useState(() => {
     const requested = window.location.hash.replace("#", "") || "inicio";
     return pages[requested] ? requested : "inicio";
@@ -50,6 +52,29 @@ export default function App() {
       .catch((error) => setProfileError(error.message || "No se pudo cargar el perfil."));
   }, [session]);
 
+  useEffect(() => {
+    if (!session || !profile || profile.role !== "admin") {
+      setAutoSync({ active: false, lastRun: null, message: "" });
+      return undefined;
+    }
+    let running = false;
+    let disposed = false;
+    const runAutomaticSync = async () => {
+      if (running || disposed || !navigator.onLine) return;
+      running = true;
+      setAutoSync((current) => ({ ...current, active: true, message: "Revisando correos nuevos..." }));
+      try {
+        const [movements, invoices] = await Promise.all([syncGmailQuick(1), syncInvoicesRecent()]);
+        if (!disposed) setAutoSync({ active: false, lastRun: new Date(), message: `${(movements.movements_created || 0) + (invoices.invoices_created || 0)} novedades registradas.` });
+      } catch (error) {
+        if (!disposed) setAutoSync({ active: false, lastRun: new Date(), message: "La revisión automática continuará en el próximo intervalo." });
+      } finally { running = false; }
+    };
+    runAutomaticSync();
+    const timer = window.setInterval(runAutomaticSync, 30000);
+    return () => { disposed = true; window.clearInterval(timer); };
+  }, [session, profile]);
+
   function navigate(page) {
     const safePage = pages[page] ? page : "inicio";
     setActivePage(safePage);
@@ -68,7 +93,7 @@ export default function App() {
 
   const Page = pages[activePage] || DashboardPage;
   return (
-    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout}>
+    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={autoSync}>
       <Page profile={profile} onNavigate={navigate} />
     </AppShell>
   );

@@ -10,7 +10,7 @@ const employeeSurface = window.location.pathname.replace(/\/$/, "") === "/emplea
 function configureInstallSurface() {
   const manifest = document.querySelector('link[rel="manifest"]') || document.createElement("link");
   manifest.setAttribute("rel", "manifest");
-  manifest.setAttribute("href", employeeSurface ? "/empleados.webmanifest" : "/manifest.webmanifest");
+  manifest.setAttribute("href", "/manifest.webmanifest");
   if (!manifest.parentNode) document.head.appendChild(manifest);
 
   const favicon = document.querySelector('link[rel="icon"]');
@@ -22,7 +22,7 @@ function configureInstallSurface() {
   if (!touchIcon.parentNode) document.head.appendChild(touchIcon);
 
   const theme = document.querySelector('meta[name="theme-color"]');
-  if (theme) theme.setAttribute("content", employeeSurface ? "#0f5132" : "#102a43");
+  if (theme) theme.setAttribute("content", "#102a43");
 
   const description = document.querySelector('meta[name="description"]');
   if (description && employeeSurface) description.setAttribute("content", "Consulta y confirmación de pagos recientes para empleados de Rafiki.");

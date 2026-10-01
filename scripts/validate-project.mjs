@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const expectedVersion = "1.4.0";
-const expectedPhase = "Fase 4A";
+const expectedVersion = "1.4.1";
+const expectedPhase = "Fase 4A.1";
 
 const migrations = [
   "supabase/2026-07-14-fase1a-base-independiente.sql",

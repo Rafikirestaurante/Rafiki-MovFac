@@ -662,3 +662,8 @@ html[data-surface="employees"] body { background: #f4f7fa; }
   .calendar-day-number { font-size: 11px; }
   .calendar-count { min-width: 13px; height: 13px; font-size: 7px; }
 }
+
+.auto-sync-status { display:flex; align-items:center; gap:8px; margin:0 0 12px; padding:8px 11px; border:1px solid #dbe7ef; border-radius:10px; background:#f7fbfd; color:var(--muted); font-size:11px; }
+.sync-dot { width:7px; height:7px; border-radius:50%; background:#72a37e; }
+.sync-dot.active { background:#e0a321; animation: rafiki-pulse 1s infinite; }
+@keyframes rafiki-pulse { 50% { opacity:.35; } }
