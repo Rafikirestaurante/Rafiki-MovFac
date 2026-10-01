@@ -65,7 +65,7 @@ function MovementAmount({ row }) {
   return <span className={`movement-amount ${income ? "income" : "expense"}`}>{income ? "+" : "−"}{cop(row.amount_cop)}</span>;
 }
 
-export default function MovementsPage({ profile, syncIndicator }) {
+export default function MovementsPage({ profile }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -172,7 +172,6 @@ export default function MovementsPage({ profile, syncIndicator }) {
 
   return (
     <>
-      <div className={`module-sync-indicator ${syncIndicator?.active ? "syncing" : syncIndicator ? "on" : "off"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{syncIndicator?.active ? "Sincronizando..." : syncIndicator?.message || "Automática"}</span></div>
       <PageHeader
         eyebrow="Bancolombia y Nequi"
         title="Movimientos"

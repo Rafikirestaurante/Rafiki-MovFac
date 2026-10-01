@@ -197,3 +197,10 @@ Los secretos de Gmail deben permanecer exclusivamente en Supabase Edge Functions
 ## Fase 5
 
 La aplicación usa un menú lateral desplegable mediante el botón de menú. En Movimientos, Opciones agrupa la sincronización manual y la sincronización por rango de fechas, mientras que el listado presenta 50 movimientos por página.
+
+La documentación activa de esta etapa está en:
+
+- `RESUMEN-FASE5.md`
+- `docs/FASE-5-INTERFAZ-COMPACTA.md`
+
+Los nuevos paquetes, resúmenes y documentos de trabajo deben incluir `FASE5` o `FASE-5` en el nombre. Los nombres de migraciones y documentos históricos anteriores se conservan sin cambios.

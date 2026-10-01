@@ -31,6 +31,7 @@ const edgeFunctions = [
 
 const required = [
   "README.md",
+  "RESUMEN-FASE5.md",
   "package.json",
   "vercel.json",
   "vite.config.js",
@@ -64,6 +65,7 @@ const required = [
   "docs/FASE-2D-FACTURACION-ELECTRONICA.md",
   "docs/FASE-3A-ESTABILIZACION-BASE.md",
   "docs/CRONOGRAMA-PROYECTO.md",
+  "docs/FASE-5-INTERFAZ-COMPACTA.md",
   "RESUMEN-FASE3A.md",
   "docs/FASE-3A1-AJUSTES-OPERATIVOS-CALENDARIO.md",
   "RESUMEN-FASE3A1.md",

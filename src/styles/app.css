@@ -758,3 +758,66 @@ html[data-surface="employees"] body { background: #f4f7fa; }
   .movement-option-group .quick-sync-actions .primary-button { grid-column: 1 / -1; }
   .results-caption { align-items: flex-start; flex-direction: column; gap: 8px; }
 }
+
+/* Fase 5 — solo dos interruptores de actualización, siempre en una fila */
+.auto-sync-control-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 14px;
+}
+.auto-sync-control {
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0 7px;
+  border: 1px solid #e3e9ee;
+  border-radius: 7px;
+  background: rgba(255,255,255,.72);
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1;
+}
+.auto-sync-control.enabled { border-color: #d4e7d9; background: #f7fbf8; color: #3a7650; }
+.auto-sync-control.disabled { border-color: #e8e1e1; background: #fcfafa; color: #8b7474; }
+.auto-sync-control .sync-dot {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  background: #bb9b9b;
+}
+.auto-sync-control.enabled .sync-dot { background: #59a16d; }
+.auto-sync-control strong,
+.auto-sync-state {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auto-sync-control strong { color: var(--ink); font-size: 9px; }
+.auto-sync-control button {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 21px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0 6px;
+  color: inherit;
+  background: rgba(16,42,67,.07);
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.auto-sync-control.enabled button { color: #2d6e43; background: #e6f3e9; }
+.auto-sync-control.disabled button { color: #7f5b5b; background: #f2eaea; }
+.module-sync-indicator { display: none !important; }
+
+@media (max-width: 500px) {
+  .auto-sync-control-row { gap: 4px; margin-bottom: 10px; }
+  .auto-sync-control { gap: 4px; padding-inline: 5px; font-size: 8px; }
+  .auto-sync-control strong { font-size: 8px; }
+  .auto-sync-control button { padding-inline: 4px; font-size: 7px; }
+}

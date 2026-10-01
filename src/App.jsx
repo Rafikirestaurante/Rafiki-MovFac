@@ -119,7 +119,7 @@ export default function App() {
   const Page = pages[activePage] || DashboardPage;
   return (
     <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, enabled: movementsAutoEnabled }, invoices: { ...autoSync.invoices, enabled: invoicesAutoEnabled } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync}>
-      <Page profile={profile} onNavigate={navigate} syncIndicator={activePage === "movimientos" ? autoSync.movements : activePage === "facturas" ? autoSync.invoices : null} />
+      <Page profile={profile} onNavigate={navigate} />
     </AppShell>
   );
 }

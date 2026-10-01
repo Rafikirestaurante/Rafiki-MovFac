@@ -60,7 +60,23 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <div className="mobile-brand"><span>R</span> Rafiki Finanzas</div>
           <div className="avatar small">{String(profile?.display_name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
         </div>
-        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "Sincronizando..." : autoSync?.movements?.enabled ? "Cada 15 segundos" : "Desactivada"}</span><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "Sincronizando..." : autoSync?.invoices?.enabled ? "Cada 60 segundos" : "Desactivada"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
+        <div className="content-wrap">
+          <div className="auto-sync-control-row" aria-label="Actualizaciones automáticas">
+            <div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}>
+              <span className="sync-dot"></span>
+              <strong>Movimientos</strong>
+              <span className="auto-sync-state">{autoSync?.movements?.active ? "Actualizando..." : autoSync?.movements?.enabled ? "Cada 15 segundos" : "Desactivada"}</span>
+              <button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button>
+            </div>
+            <div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}>
+              <span className="sync-dot"></span>
+              <strong>Facturas</strong>
+              <span className="auto-sync-state">{autoSync?.invoices?.active ? "Actualizando..." : autoSync?.invoices?.enabled ? "Cada 60 segundos" : "Desactivada"}</span>
+              <button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button>
+            </div>
+          </div>
+          {children}
+        </div>
       </main>
 
     </div>
