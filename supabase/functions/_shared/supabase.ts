@@ -5,7 +5,7 @@ export function adminClient(): SupabaseClient {
   return createClient(requiredEnv("SUPABASE_URL"), requiredEnv("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-export type AdminContext = { client: SupabaseClient; user: User; email: string };
+export type AdminContext = { client: SupabaseClient; user: User; email: string; role: string };
 
 export async function requireAppAdmin(request: Request): Promise<AdminContext> {
   const token = String(request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
@@ -21,6 +21,8 @@ export async function requireAppAdmin(request: Request): Promise<AdminContext> {
     .eq("id", userData.user.id)
     .maybeSingle();
   if (profileError) throw new Error(`No se pudo validar el rol: ${profileError.message}`);
-  if (!profile || profile.status !== "active" || profile.role !== "admin") throw new Error("Solo el Administrador puede configurar Gmail.");
-  return { client, user: userData.user, email };
+  if (!profile || profile.status !== "active" || !["platform_admin", "workspace_owner", "admin"].includes(profile.role)) {
+    throw new Error("Solo el propietario del workspace puede configurar su Gmail.");
+  }
+  return { client, user: userData.user, email, role: profile.role };
 }
