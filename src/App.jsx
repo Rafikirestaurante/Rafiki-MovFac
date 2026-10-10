@@ -5,6 +5,7 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import MovementsPage from "./pages/MovementsPage.jsx";
 import InvoicesPage from "./pages/InvoicesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+import UserAdminPage from "./pages/UserAdminPage.jsx";
 import { Alert } from "./components/Ui.jsx";
 import { getCurrentProfile, getSession, onAuthStateChange, signOut } from "./services/authService.js";
 import { syncGmailQuick, syncInvoicesRecent } from "./services/gmailIntegrationService.js";
@@ -14,6 +15,7 @@ const pages = {
   movimientos: MovementsPage,
   facturas: InvoicesPage,
   configuracion: SettingsPage
+  ,usuarios: UserAdminPage
 };
 
 function LoadingScreen() {
@@ -119,7 +121,7 @@ export default function App() {
   const Page = pages[activePage] || DashboardPage;
   return (
     <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, enabled: movementsAutoEnabled }, invoices: { ...autoSync.invoices, enabled: invoicesAutoEnabled } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync}>
-      <Page profile={profile} onNavigate={navigate} />
+      <Page profile={profile} onNavigate={navigate} syncIndicator={activePage === "movimientos" ? autoSync.movements : activePage === "facturas" ? autoSync.invoices : null} />
     </AppShell>
   );
 }

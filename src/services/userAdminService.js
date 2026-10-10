@@ -1,0 +1,3 @@
+import { supabase } from "../supabaseClient.js";
+export async function listAuthorizedUsers() { const { data, error } = await supabase.from("authorized_users").select("id,email,status,authorized_at,last_access_at").order("created_at", { ascending:false }); if(error) throw error; return data || []; }
+export async function setAuthorizedUser(email, status) { const { data:user } = await supabase.auth.getUser(); if(!user?.user) throw new Error("Sesión no disponible"); const normalized=email.trim().toLowerCase(); const { data, error }=await supabase.from("authorized_users").upsert({email:normalized,status,authorized_by:user.user.id},{onConflict:"email"}).select().single(); if(error) throw error; return data; }
