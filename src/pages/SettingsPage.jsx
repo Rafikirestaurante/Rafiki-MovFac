@@ -421,33 +421,6 @@ export default function SettingsPage({ profile }) {
         {statusUnavailable ? <Alert tone="danger">La sincronización está bloqueada porque no se pudo comprobar la comunicación con las Edge Functions. Ejecuta “Diagnosticar comunicación”.</Alert> : !canAttemptGmail ? <Alert tone="warning">Conecta Gmail antes de ejecutar una sincronización.</Alert> : null}
       </section>
 
-      <section className="panel-card employee-access-settings-card">
-        <div className="panel-heading">
-          <div><span className="eyebrow">Acceso restringido</span><h2>Enlace público para empleados</h2></div>
-          <Badge tone={employeeEnabled ? "success" : "neutral"}>{employeeEnabled ? "Activo" : "Desactivado"}</Badge>
-        </div>
-        <p className="panel-description">Permite consultar solamente los cinco movimientos más recientes, buscar alertas Bancolombia de la última 1, 3 o 6 horas, confirmar ingresos e instalar una PWA independiente para empleados.</p>
-        {employeeMessage ? <Alert tone={employeeTone}>{employeeMessage}</Alert> : null}
-        <div className="employee-access-form">
-          <label><span>Nombre de acceso</span><input value={employeeUsername} maxLength={40} onChange={(event) => setEmployeeUsername(event.target.value.toLowerCase())} placeholder="empleados" disabled={!isAdmin || Boolean(employeeAction)} /></label>
-          <label><span>{employeeAccess.password_configured ? "Nueva contraseña (opcional)" : "Contraseña"}</span><input type="password" value={employeePassword} maxLength={72} onChange={(event) => setEmployeePassword(event.target.value)} placeholder={employeeAccess.password_configured ? "Déjala vacía para conservar la actual" : "Mínimo 4 caracteres"} disabled={!isAdmin || Boolean(employeeAction)} /></label>
-          <label className="employee-access-toggle"><input type="checkbox" checked={employeeEnabled} onChange={(event) => setEmployeeEnabled(event.target.checked)} disabled={!isAdmin || Boolean(employeeAction)} /><span>Habilitar acceso público</span></label>
-        </div>
-        <div className="employee-public-link-box"><span>Enlace para compartir</span><strong>{employeeAccess.public_url || `${window.location.origin}/empleados`}</strong></div>
-        <div className="button-row">
-          <button className="primary-button" onClick={savePublicEmployeeAccess} disabled={!isAdmin || Boolean(employeeAction) || !employeeUsername || (!employeeAccess.password_configured && employeePassword.length < 4)}><Icon name="shield" size={18} /> {employeeAction === "save" ? "Guardando..." : "Guardar acceso"}</button>
-          <button className="secondary-button" onClick={copyEmployeeLink} disabled={!employeeAccess.public_url && !window.location.origin}><Icon name="check" size={18} /> Copiar enlace</button>
-          <a className="secondary-button employee-link-button" href="/empleados" target="_blank" rel="noreferrer">Abrir vista pública</a>
-        </div>
-        <div className="employee-access-restrictions">
-          <div><Icon name="check" size={16} /><span>Solo cinco movimientos</span></div>
-          <div><Icon name="check" size={16} /><span>Sin acceso a Gmail ni facturas</span></div>
-          <div><Icon name="check" size={16} /><span>Sesión temporal de 8 horas</span></div>
-          <div><Icon name="check" size={16} /><span>PWA instalable e independiente</span></div>
-        </div>
-        <Alert tone="warning">El nombre y la contraseña son compartidos. Al cambiar cualquiera de los dos, todas las sesiones públicas abiertas se cierran automáticamente.</Alert>
-      </section>
-
       {confirmDisconnect ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setConfirmDisconnect(false)}>
           <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="disconnect-title" onMouseDown={(event) => event.stopPropagation()}>

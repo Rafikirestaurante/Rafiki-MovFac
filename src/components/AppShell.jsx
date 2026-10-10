@@ -30,11 +30,6 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <button className="icon-button close-sidebar" onClick={() => setOpen(false)} aria-label="Cerrar menú"><Icon name="close" /></button>
         </div>
 
-        <div className="app-surface-tabs" role="tablist" aria-label="Vistas de Rafiki">
-          <a className="app-surface-tab active" href="/" role="tab" aria-selected="true"><Icon name="home" size={16} /> Vista normal</a>
-          <a className="app-surface-tab" href="/empleados" role="tab" aria-selected="false"><Icon name="users" size={16} /> Empleados</a>
-        </div>
-
         <nav className="side-nav">
           {navigation.concat(profile?.role === "admin" ? [{id:"usuarios",label:"Usuarios",icon:"users"}] : []).map((item) => (
             <button key={item.id} className={activePage === item.id ? "active" : ""} onClick={() => navigate(item.id)}>
@@ -65,7 +60,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <div className="mobile-brand"><span>R</span> Rafiki Finanzas</div>
           <div className="avatar small">{String(profile?.display_name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
         </div>
-        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "Sincronizando..." : autoSync?.movements?.enabled ? "Cada 15 segundos" : "Desactivada"}</span><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "Sincronizando..." : autoSync?.invoices?.enabled ? "Cada 60 segundos" : "Desactivada"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
+        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "..." : autoSync?.movements?.enabled ? "10 s" : "Off"}</span><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "..." : autoSync?.invoices?.enabled ? "60 s" : "Off"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
       </main>
 
       <nav className="bottom-nav">

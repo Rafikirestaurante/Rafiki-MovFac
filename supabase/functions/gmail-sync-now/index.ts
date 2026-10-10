@@ -104,8 +104,8 @@ Deno.serve(async (request: Request) => {
   try {
     const body = await request.json().catch(() => ({}));
     const requestedQuickHours = Number(body.quick_hours ?? 1);
-    const quickHours = [1, 3, 6].includes(requestedQuickHours) ? requestedQuickHours : 1;
-    const quickMessageLimit = quickHours === 6 ? 120 : quickHours === 3 ? 60 : 20;
+    const quickHours = [1, 6, 24].includes(requestedQuickHours) ? requestedQuickHours : 1;
+    const quickMessageLimit = quickHours === 24 ? 500 : quickHours === 6 ? 120 : 20;
     const employeeToken = String(request.headers.get("x-employee-access-token") || "").trim();
     if (employeeToken) {
       operationClient = adminClient();
@@ -477,3 +477,4 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
   }
 });
+

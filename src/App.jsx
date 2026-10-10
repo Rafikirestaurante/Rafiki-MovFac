@@ -89,7 +89,7 @@ export default function App() {
     };
     if (movementsAutoEnabled) syncMovements();
     if (invoicesAutoEnabled) syncInvoices();
-    const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, 15000) : null;
+    const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, 10000) : null;
     const invoiceTimer = invoicesAutoEnabled ? window.setInterval(syncInvoices, 60000) : null;
     return () => { disposed = true; window.clearInterval(movementTimer); window.clearInterval(invoiceTimer); };
   }, [session, profile, movementsAutoEnabled, invoicesAutoEnabled]);

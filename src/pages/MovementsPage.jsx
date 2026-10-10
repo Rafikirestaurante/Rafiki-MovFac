@@ -171,14 +171,14 @@ export default function MovementsPage({ profile, syncIndicator }) {
         <div className="movement-sync-copy">
           <span className="eyebrow">Bancolombia</span>
           <strong>Búsqueda por horas</strong>
-          <small>Busca exclusivamente alertas de Bancolombia recibidas durante la última 1, 3 o 6 horas exactas desde el momento del clic.</small>
+          <small>Busca exclusivamente alertas de Bancolombia recibidas durante la última 1, 6 o 24 horas exactas desde el momento del clic.</small>
         </div>
         <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
           <button className="primary-button" onClick={() => synchronizeQuick(1)} disabled={!isAdmin || syncing || loading}>
             <Icon name="refresh" size={18} /> {quickSyncHours === 1 ? "Buscando..." : "Búsqueda rápida"}
           </button>
-          <button className="secondary-button" onClick={() => synchronizeQuick(3)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 3 ? "Buscando..." : "3 horas"}</button>
-          <button className="secondary-button" onClick={() => synchronizeQuick(6)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 6 ? "Buscando..." : "6 horas"}</button>
+          <button className="secondary-button" onClick={() => synchronizeQuick(24)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 24 ? "Buscando..." : "24 horas"}</button>
+          <button className="secondary-button" onClick={() => synchronizeQuick(24)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 24 ? "Buscando..." : "24 horas"}</button>
         </div>
       </details>
 
@@ -244,3 +244,5 @@ export default function MovementsPage({ profile, syncIndicator }) {
     </>
   );
 }
+
+
