@@ -27,6 +27,12 @@ function formatDate(value) {
   }
 }
 
+function formatTechnicalError(value) {
+  if (value === null || value === undefined) return "Sin detalle disponible.";
+  if (typeof value === "string") return value;
+  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+}
+
 export default function SettingsPage({ profile }) {
   const [status, setStatus] = useState({ configured: false, connection: null });
   const [loading, setLoading] = useState(true);
@@ -320,7 +326,7 @@ export default function SettingsPage({ profile }) {
             <details className="technical-errors connection-errors-visible">
               <summary>Ver errores recientes ({status.recent_errors.length})</summary>
               <div>{status.recent_errors.map((item) => (
-                <article key={item.id}><div><strong>{item.source || "gmail"} · {item.stage}</strong><span>{formatDate(item.created_at)}</span></div><p>{item.error_message}</p>{item.sync_run_id ? <small>Ejecución #{item.sync_run_id}</small> : null}</article>
+                <article key={item.id}><div><strong>{item.source || "gmail"} · {item.stage}</strong><span>{formatDate(item.created_at)}</span></div><p className="technical-error-message">{formatTechnicalError(item.error_message)}</p>{item.sync_run_id ? <small>Ejecución #{item.sync_run_id}</small> : null}</article>
               ))}</div>
             </details>
           ) : null}
@@ -358,7 +364,7 @@ export default function SettingsPage({ profile }) {
                 <details className="technical-errors">
                   <summary>Ver últimos errores técnicos ({diagnostics.recent_errors.length})</summary>
                   <div>{diagnostics.recent_errors.map((item) => (
-                    <article key={item.id}><div><strong>{item.source || "gmail"} · {item.stage}</strong><span>{formatDate(item.created_at)}</span></div><p>{item.error_message}</p>{item.sync_run_id ? <small>Ejecución #{item.sync_run_id}</small> : null}</article>
+                    <article key={item.id}><div><strong>{item.source || "gmail"} · {item.stage}</strong><span>{formatDate(item.created_at)}</span></div><p className="technical-error-message">{formatTechnicalError(item.error_message)}</p>{item.sync_run_id ? <small>Ejecución #{item.sync_run_id}</small> : null}</article>
                   ))}</div>
                 </details>
               ) : <small className="diagnostic-empty">No hay errores técnicos recientes registrados.</small>}
