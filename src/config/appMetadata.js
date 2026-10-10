@@ -1,5 +1,5 @@
-export const APP_VERSION = "1.4.1";
-export const APP_PHASE = "Fase 4A.1";
-export const APP_PHASE_TITLE = "Automatización, PWA y alertas Bancolombia";
+export const APP_VERSION = "1.6.5";
+export const APP_PHASE = "Fase 5C";
+export const APP_PHASE_TITLE = "Acceso independiente y workspaces personales";
 export const APP_PHASE_DESCRIPTION =
-  "Prepara la automatización de sincronizaciones, activa la instalación PWA y conserva alertas Bancolombia no reconocidas para revisión sin crear movimientos falsos.";
+  "Valida correos autorizados y crea un workspace personal aislado para cada usuario.";

@@ -153,7 +153,6 @@ export default function MovementsPage({ profile, syncIndicator }) {
 
   return (
     <>
-      <div className={`module-sync-indicator ${syncIndicator?.active ? "syncing" : syncIndicator ? "on" : "off"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{syncIndicator?.active ? "Sincronizando..." : syncIndicator?.message || "Automática"}</span></div>
       <PageHeader
         eyebrow="Bancolombia y Nequi"
         title="Movimientos"
@@ -177,7 +176,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
           <button className="primary-button" onClick={() => synchronizeQuick(1)} disabled={!isAdmin || syncing || loading}>
             <Icon name="refresh" size={18} /> {quickSyncHours === 1 ? "Buscando..." : "Búsqueda rápida"}
           </button>
-          <button className="secondary-button" onClick={() => synchronizeQuick(24)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 24 ? "Buscando..." : "24 horas"}</button>
+          <button className="secondary-button" onClick={() => synchronizeQuick(6)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 6 ? "Buscando..." : "6 horas"}</button>
           <button className="secondary-button" onClick={() => synchronizeQuick(24)} disabled={!isAdmin || syncing || loading}>{quickSyncHours === 24 ? "Buscando..." : "24 horas"}</button>
         </div>
       </details>
