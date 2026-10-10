@@ -4,3 +4,4 @@ export const APP_PHASE_TITLE = "Gmail independiente por usuario";
 export const APP_PHASE_DESCRIPTION =
   "Prepara conexiones Gmail, tokens y sincronizaciones independientes para cada workspace.";
 
+

@@ -101,6 +101,7 @@ Deno.serve(async (request: Request) => {
   let actorEmail = "";
   let publicEmployeeAccess = false;
   let publicClientKey = "";
+  let admin: any = null;
   try {
     const body = await request.json().catch(() => ({}));
     const requestedQuickHours = Number(body.quick_hours ?? 1);
@@ -119,7 +120,7 @@ Deno.serve(async (request: Request) => {
         access_username: session.username, detail: { phase: "3A.3", quick_hours: quickHours, quick_message_limit: quickMessageLimit }
       });
     } else {
-      const admin = await requireAppAdmin(request);
+      admin = await requireAppAdmin(request);
       operationClient = admin.client as ReturnType<typeof adminClient>;
       actorUserId = admin.user.id;
       actorEmail = admin.email;
@@ -477,6 +478,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
   }
 });
+
 
 
 
