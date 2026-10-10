@@ -71,7 +71,7 @@ export default function App() {
           window.dispatchEvent(new CustomEvent("rafiki:movements-updated", { detail: data }));
           setAutoSync((v) => ({ ...v, movements: { active: false, lastRun: new Date(), message: `${data.movements_created || 0} nuevos` } }));
         }
-      } catch { if (!disposed) setAutoSync((v) => ({ ...v, movements: { active: false, lastRun: new Date(), message: "Error de sincronización" } })); }
+      } catch { if (!disposed) setAutoSync((v) => ({ ...v, movements: { active: false, lastRun: new Date(), message: "" } })); }
       finally { movementRunning = false; }
     };
     const syncInvoices = async () => {
@@ -84,7 +84,7 @@ export default function App() {
           window.dispatchEvent(new CustomEvent("rafiki:invoices-updated", { detail: data }));
           setAutoSync((v) => ({ ...v, invoices: { active: false, lastRun: new Date(), message: `${data.invoices_created || 0} nuevas` } }));
         }
-      } catch { if (!disposed) setAutoSync((v) => ({ ...v, invoices: { active: false, lastRun: new Date(), message: "Error de sincronización" } })); }
+      } catch { if (!disposed) setAutoSync((v) => ({ ...v, invoices: { active: false, lastRun: new Date(), message: "" } })); }
       finally { invoiceRunning = false; }
     };
     if (movementsAutoEnabled) syncMovements();

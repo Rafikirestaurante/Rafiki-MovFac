@@ -1,0 +1,3 @@
+# Resumen — Rafiki MF Fase 3A
+
+Versión **1.3.1**. Se estabilizó la base oficial 1.3.0 / Fase 2D sin agregar nuevas funciones ni migraciones SQL. Se actualizó la documentación general, se centralizó la versión visible de la aplicación, se corrigieron instrucciones desactualizadas del acceso para empleados y se añadió un comando de revisión integral. El validador ahora comprueba la estructura vigente, las diez Edge Functions, las siete migraciones, el flujo de despliegue, los secretos de ejemplo y la ausencia de archivos prohibidos. La base conserva Bancolombia, diagnóstico Gmail, Rafiki Empleados y facturación electrónica ZIP/XML/PDF.

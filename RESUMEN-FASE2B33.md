@@ -1,0 +1,3 @@
+# Resumen — Fase 2B.3.3
+
+Versión 1.2.6. La vista pública `/empleados` incorpora el mismo selector de sincronización rápida de Movimientos con opciones de 2, 6 y 12 horas, usando 2 horas por defecto. La Edge Function `gmail-sync-now` valida esos valores también para solicitudes públicas, mantiene el límite de una ejecución por minuto, consulta solo alertas Bancolombia y procesa máximo 100 mensajes. Además, `/empleados` se convierte en una PWA independiente llamada “Rafiki Empleados”, con manifiesto, identidad, iconos, inicio directo y opción de instalación propios. No requiere SQL; se deben redesplegar `gmail-sync-now` y `employee-public-access` y esperar Vercel.
