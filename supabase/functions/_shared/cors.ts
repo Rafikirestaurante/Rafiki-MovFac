@@ -38,3 +38,4 @@ export function optionsResponse(request: Request): Response | null {
   if (request.method !== "OPTIONS") return null;
   return new Response("ok", { status: 200, headers: corsHeaders(request) });
 }
+

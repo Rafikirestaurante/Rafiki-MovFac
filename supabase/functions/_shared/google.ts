@@ -75,3 +75,4 @@ export async function revokeGoogleToken(token: string): Promise<void> {
   const response = await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" } });
   if (!response.ok && response.status !== 400) throw new Error(`Google no pudo revocar el acceso (${response.status}).`);
 }
+

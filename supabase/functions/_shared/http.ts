@@ -7,3 +7,4 @@ export function jsonResponse(request: Request, body: Record<string, unknown>, st
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error || "Error desconocido");
 }
+

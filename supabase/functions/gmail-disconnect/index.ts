@@ -10,7 +10,8 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
   try {
-    const { client, user, email } = await requireAppAdmin(request);
+    const admin = await requireAppAdmin(request);
+    const { client, user, email } = admin;
     const { data: connection, error } = await client
       .from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv")
@@ -51,5 +52,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error) }, 400);
   }
 });
+
+
 
 

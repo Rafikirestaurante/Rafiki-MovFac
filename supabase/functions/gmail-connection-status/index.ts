@@ -7,7 +7,8 @@ Deno.serve(async (request: Request) => {
   if (preflight) return preflight;
   if (!["GET", "POST"].includes(request.method)) return jsonResponse(request, { error: "Método no permitido." }, 405);
   try {
-    const admin = await requireAppAdmin(request);`r`n    const { client } = admin;
+    const admin = await requireAppAdmin(request);
+    const { client } = admin;
     const [{ data, error }, { data: recentErrors }] = await Promise.all([
       client
         .from("gmail_connections")
@@ -26,5 +27,8 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error) }, 403);
   }
 });
+
+
+
 
 

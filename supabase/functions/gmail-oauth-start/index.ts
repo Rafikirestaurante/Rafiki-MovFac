@@ -10,7 +10,8 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
   try {
-    const { client, user, email } = await requireAppAdmin(request);
+    const admin = await requireAppAdmin(request);
+    const { client, user, email } = admin;
     const state = randomState();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -37,5 +38,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error) }, 403);
   }
 });
+
+
 
 

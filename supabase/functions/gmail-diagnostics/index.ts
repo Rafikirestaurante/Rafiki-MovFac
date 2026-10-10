@@ -46,7 +46,8 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
   try {
-    const { client, user, email } = await requireAppAdmin(request);
+    const admin = await requireAppAdmin(request);
+    const { client, user, email } = admin;
     const checks: Check[] = [];
     const checkedAt = new Date().toISOString();
 
@@ -187,5 +188,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: friendlyError(error) }, 403);
   }
 });
+
+
 
 

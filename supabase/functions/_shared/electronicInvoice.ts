@@ -147,3 +147,4 @@ export function guessInvoiceFromEmail(input: { subject?: string; text?: string; 
     source_metadata: { pdf_fallback: true, missing_fields: [!number && "invoice_number", total === null && "total_cop", "supplier_tax_id", "cufe"].filter(Boolean) }
   };
 }
+

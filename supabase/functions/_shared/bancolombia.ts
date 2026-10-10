@@ -359,3 +359,4 @@ export function extractBancolombiaMovement(input: {
     }
   };
 }
+

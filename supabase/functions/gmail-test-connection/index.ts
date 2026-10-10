@@ -10,7 +10,8 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
   try {
-    const { client, user, email } = await requireAppAdmin(request);
+    const admin = await requireAppAdmin(request);
+    const { client, user, email } = admin;
     const { data: connection, error } = await client
       .from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv,status")
@@ -45,7 +46,8 @@ Deno.serve(async (request: Request) => {
   } catch (error) {
     const detail = errorMessage(error);
     try {
-      const { client, user, email } = await requireAppAdmin(request);
+      const admin = await requireAppAdmin(request);
+    const { client, user, email } = admin;
       await client.from("gmail_connections").update({ status: "error", last_error: detail }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "connection_test_error", user_id: user.id, user_email: email, detail: { error: detail } });
     } catch {
@@ -54,5 +56,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: detail }, 400);
   }
 });
+
+
 
 

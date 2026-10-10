@@ -26,3 +26,4 @@ export async function requireAppAdmin(request: Request): Promise<AdminContext> {
   }
   return { client, user: userData.user, email, role: profile.role };
 }
+

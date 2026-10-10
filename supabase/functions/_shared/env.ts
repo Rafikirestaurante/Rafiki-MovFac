@@ -11,3 +11,4 @@ export function appRedirectUrl(result: "connected" | "error" | "disconnected", d
   url.hash = "configuracion";
   return url.toString();
 }
+
