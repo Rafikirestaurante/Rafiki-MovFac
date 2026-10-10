@@ -14,7 +14,7 @@ Deno.serve(async (request: Request) => {
     const { data: connection, error } = await client
       .from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv")
-      .eq("connection_key", "principal")
+      .eq("owner_user_id", admin.user.id)
       .maybeSingle();
     if (error) throw new Error(`No se pudo consultar la conexión: ${error.message}`);
     if (!connection) throw new Error("No existe una conexión de Gmail para desconectar.");
@@ -35,7 +35,7 @@ Deno.serve(async (request: Request) => {
       refresh_token_iv: null,
       disconnected_at: disconnectedAt,
       last_error: warning || null
-    }).eq("connection_key", "principal");
+    }).eq("owner_user_id", admin.user.id);
     if (updateError) throw new Error(`No se pudo desconectar la cuenta: ${updateError.message}`);
 
     await client.from("gmail_integration_audit").insert({
@@ -51,3 +51,5 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error) }, 400);
   }
 });
+
+

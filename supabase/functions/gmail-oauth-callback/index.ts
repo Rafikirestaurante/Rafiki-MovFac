@@ -63,7 +63,7 @@ Deno.serve(async (request: Request) => {
       last_verified_at: connectedAt,
       last_error: null,
       disconnected_at: null
-    }, { onConflict: "connection_key" });
+    }, { onConflict: "workspace_id" });
     if (connectionError) throw new Error(`No se pudo guardar la conexión: ${connectionError.message}`);
 
     await client.from("gmail_integration_audit").insert({
@@ -90,3 +90,6 @@ Deno.serve(async (request: Request) => {
     return redirectSafely("error", detail);
   }
 });
+
+
+

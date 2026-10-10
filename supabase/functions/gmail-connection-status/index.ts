@@ -7,12 +7,12 @@ Deno.serve(async (request: Request) => {
   if (preflight) return preflight;
   if (!["GET", "POST"].includes(request.method)) return jsonResponse(request, { error: "Método no permitido." }, 405);
   try {
-    const { client } = await requireAppAdmin(request);
+    const admin = await requireAppAdmin(request);`r`n    const { client } = admin;
     const [{ data, error }, { data: recentErrors }] = await Promise.all([
       client
         .from("gmail_connections")
         .select("google_email,status,connected_at,last_verified_at,last_sync_at,last_error,disconnected_at,granted_scope")
-        .eq("connection_key", "principal")
+        .eq("owner_user_id", admin.user.id)
         .maybeSingle(),
       client
         .from("processing_errors")
@@ -26,3 +26,5 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error) }, 403);
   }
 });
+
+

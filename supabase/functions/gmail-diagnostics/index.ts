@@ -77,7 +77,7 @@ Deno.serve(async (request: Request) => {
     const { data: connection, error: connectionError } = await client
       .from("gmail_connections")
       .select("google_email,status,connected_at,last_verified_at,last_sync_at,last_error,granted_scope,refresh_token_ciphertext,refresh_token_iv")
-      .eq("connection_key", "principal")
+      .eq("owner_user_id", admin.user.id)
       .maybeSingle();
 
     if (connectionError) {
@@ -101,7 +101,7 @@ Deno.serve(async (request: Request) => {
     if (!connection.refresh_token_ciphertext || !connection.refresh_token_iv) {
       const message = "La conexión no contiene una credencial reutilizable. Debes conectar Gmail nuevamente.";
       checks.push({ key: "credentials", label: "Credencial guardada", ok: false, message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("connection_key", "principal");
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
     checks.push({ key: "credentials", label: "Credencial guardada", ok: true, message: "La credencial cifrada está disponible." });
@@ -113,7 +113,7 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "decryption", label: "Descifrado seguro", ok: false, message: "No se pudo descifrar la credencial.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("connection_key", "principal");
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "decryption", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
@@ -126,7 +126,7 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "token", label: "Autorización de Google", ok: false, message: "Google no pudo renovar el acceso.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("connection_key", "principal");
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "token_refresh", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
@@ -138,7 +138,7 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "profile", label: "Lectura de Gmail", ok: false, message: "No fue posible consultar el buzón.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("connection_key", "principal");
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_profile", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
@@ -154,7 +154,7 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "search", label: "Búsqueda de alertas Bancolombia", ok: false, message: "Gmail respondió, pero la búsqueda de mensajes falló.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("connection_key", "principal");
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_search", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
@@ -164,7 +164,7 @@ Deno.serve(async (request: Request) => {
       status: "connected",
       last_verified_at: checkedAt,
       last_error: null
-    }).eq("connection_key", "principal");
+    }).eq("owner_user_id", admin.user.id);
 
     await client.from("gmail_integration_audit").insert({
       event_type: "diagnostic_ok",
@@ -187,3 +187,5 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: friendlyError(error) }, 403);
   }
 });
+
+

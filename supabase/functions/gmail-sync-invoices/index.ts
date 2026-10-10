@@ -113,7 +113,7 @@ Deno.serve(async (request: Request) => {
     if (runError) throw new Error(`No se pudo registrar la sincronización: ${runError.message}`);
     syncRunId = Number(run.id);
 
-    const { data: connection, error: connectionError } = await client.from("gmail_connections").select("google_email,refresh_token_ciphertext,refresh_token_iv,status").eq("connection_key", "principal").maybeSingle();
+    const { data: connection, error: connectionError } = await client.from("gmail_connections").select("google_email,refresh_token_ciphertext,refresh_token_iv,status").eq("owner_user_id", admin.user.id).maybeSingle();
     if (connectionError) throw new Error(connectionError.message);
     if (!connection || connection.status === "disconnected" || !connection.refresh_token_ciphertext || !connection.refresh_token_iv) throw new Error("Gmail no tiene una conexión reutilizable.");
     const refreshToken = await decryptSecret(connection.refresh_token_ciphertext, connection.refresh_token_iv);
@@ -246,7 +246,7 @@ Deno.serve(async (request: Request) => {
     const detail = { phase: "2D", mode, date_from: dateFrom, date_to: dateTo, messages_found: refs.length, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION };
     const finishedAt = new Date().toISOString();
     await client.from("gmail_sync_runs").update({ status, finished_at: finishedAt, messages_scanned: messagesScanned, invoices_created: invoicesCreated, duplicates_ignored: duplicates, errors_count: errors, detail }).eq("id", syncRunId);
-    await client.from("gmail_connections").update({ status: "connected", last_verified_at: finishedAt, last_sync_at: finishedAt, last_error: errors ? `${errors} correo(s) de facturación presentaron errores.` : null }).eq("connection_key", "principal");
+    await client.from("gmail_connections").update({ status: "connected", last_verified_at: finishedAt, last_sync_at: finishedAt, last_error: errors ? `${errors} correo(s) de facturación presentaron errores.` : null }).eq("owner_user_id", admin.user.id);
     await client.from("gmail_integration_audit").insert({ event_type: "invoice_sync", user_id: admin.user.id, user_email: admin.email, google_email: connection.google_email, detail: { sync_run_id: syncRunId, ...detail, errors } });
     return jsonResponse(request, { sync_run_id: syncRunId, status, messages_found: refs.length, messages_scanned: messagesScanned, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, errors_count: errors });
   } catch (error) {
@@ -259,3 +259,5 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
   }
 });
+
+

@@ -160,7 +160,7 @@ Deno.serve(async (request: Request) => {
 
     const { data: connection, error: connectionError } = await client.from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv,status")
-      .eq("connection_key", "principal").maybeSingle();
+      .eq("owner_user_id", admin.user.id).maybeSingle();
     if (connectionError) throw new Error(`No se pudo consultar Gmail: ${connectionError.message}`);
     if (!connection || connection.status === "disconnected" || !connection.refresh_token_ciphertext || !connection.refresh_token_iv) {
       throw new Error("Gmail no tiene una conexión reutilizable. Ejecuta el verificador y, si es necesario, conecta la cuenta nuevamente.");
@@ -424,7 +424,7 @@ Deno.serve(async (request: Request) => {
       last_verified_at: finishedAt,
       last_sync_at: finishedAt,
       last_error: errors ? `${errors} correo(s) presentaron errores de lectura. Consulta el diagnóstico para ver el detalle.` : null
-    }).eq("connection_key", "principal");
+    }).eq("owner_user_id", admin.user.id);
     await client.from("gmail_integration_audit").insert({
       event_type: publicEmployeeAccess ? "employee_public_sync" : "manual_sync",
       user_id: actorUserId,
@@ -471,10 +471,12 @@ Deno.serve(async (request: Request) => {
           error_message: fatalDetail,
           technical_detail: { phase: "3A.3", fatal: true }
         });
-        await client.from("gmail_connections").update({ status: "error", last_error: fatalDetail }).eq("connection_key", "principal");
+        await client.from("gmail_connections").update({ status: "error", last_error: fatalDetail }).eq("owner_user_id", admin.user.id);
       } catch { /* conservar el error original */ }
     }
     return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
   }
 });
+
+
 

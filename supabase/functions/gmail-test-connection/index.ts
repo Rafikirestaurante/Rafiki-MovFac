@@ -14,7 +14,7 @@ Deno.serve(async (request: Request) => {
     const { data: connection, error } = await client
       .from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv,status")
-      .eq("connection_key", "principal")
+      .eq("owner_user_id", admin.user.id)
       .maybeSingle();
     if (error) throw new Error(`No se pudo consultar la conexión: ${error.message}`);
     if (!connection || connection.status !== "connected") throw new Error("No hay una cuenta de Gmail conectada.");
@@ -31,7 +31,7 @@ Deno.serve(async (request: Request) => {
       status: "connected",
       last_verified_at: verifiedAt,
       last_error: null
-    }).eq("connection_key", "principal");
+    }).eq("owner_user_id", admin.user.id);
 
     await client.from("gmail_integration_audit").insert({
       event_type: "connection_test_ok",
@@ -46,7 +46,7 @@ Deno.serve(async (request: Request) => {
     const detail = errorMessage(error);
     try {
       const { client, user, email } = await requireAppAdmin(request);
-      await client.from("gmail_connections").update({ status: "error", last_error: detail }).eq("connection_key", "principal");
+      await client.from("gmail_connections").update({ status: "error", last_error: detail }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "connection_test_error", user_id: user.id, user_email: email, detail: { error: detail } });
     } catch {
       // Conserva el error original.
@@ -54,3 +54,5 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: detail }, 400);
   }
 });
+
+
