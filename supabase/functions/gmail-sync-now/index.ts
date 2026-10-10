@@ -127,6 +127,9 @@ Deno.serve(async (request: Request) => {
     }
     if (!operationClient) throw new Error("No se pudo establecer el contexto de sincronización.");
     const client = operationClient;
+    const { data: workspace, error: workspaceError } = await client.from("workspaces").select("id").eq("owner_user_id", actorUserId).maybeSingle();
+    if (workspaceError || !workspace) throw new Error("El usuario no tiene un workspace activo para sincronizar.");
+    const workspaceId = workspace.id;
     const now = new Date();
     const requestedMode = String(body.mode || "range").toLowerCase();
     const syncMode = publicEmployeeAccess || requestedMode === "quick" ? "quick" : "range";
@@ -144,6 +147,7 @@ Deno.serve(async (request: Request) => {
     if (activeRun) return jsonResponse(request, { error: "Ya existe una sincronización en curso. Intenta nuevamente cuando finalice.", active_run_id: activeRun.id }, 409);
 
     const { data: run, error: runError } = await client.from("gmail_sync_runs").insert({
+      workspace_id: workspaceId,
       trigger_type: "manual", status: "running", requested_by: actorUserId,
       detail: {
         phase: publicEmployeeAccess ? "3A.3-public" : "3A.3",
@@ -288,6 +292,7 @@ Deno.serve(async (request: Request) => {
           const fingerprint = await sha256Hex(fingerprintSource);
           const { data: existingMovement, error: existingMovementError } = await client.from("financial_movements")
             .select("id,source_metadata")
+            .eq("workspace_id", workspaceId)
             .eq("gmail_message_id", message.id)
             .eq("movement_type", extraction.movement_type)
             .maybeSingle();
@@ -317,6 +322,7 @@ Deno.serve(async (request: Request) => {
           } else {
             const { data: fingerprintMatch, error: fingerprintError } = await client.from("financial_movements")
               .select("id,gmail_message_id")
+              .eq("workspace_id", workspaceId)
               .eq("raw_fingerprint", fingerprint)
               .neq("gmail_message_id", message.id)
               .limit(1)
@@ -328,6 +334,7 @@ Deno.serve(async (request: Request) => {
               movementResult = "movement_duplicate_ignored";
             } else {
               const { error: movementError } = await client.from("financial_movements").insert({
+                workspace_id: workspaceId,
                 gmail_message_id: message.id,
                 gmail_thread_id: fullMessage.threadId || message.threadId || ref.threadId || null,
                 source: "bancolombia",

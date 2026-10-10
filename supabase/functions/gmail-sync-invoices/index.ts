@@ -94,6 +94,8 @@ Deno.serve(async (request: Request) => {
   try {
     const admin = await requireAppAdmin(request);
     const client = admin.client;
+    const { data: workspace, error: workspaceError } = await client.from("workspaces").select("id").eq("owner_user_id", admin.user.id).maybeSingle();
+    if (workspaceError || !workspace) throw new Error("El usuario no tiene un workspace activo para sincronizar.");
     const body = await request.json().catch(() => ({}));
     const now = new Date();
     const mode = String(body.mode || "recent") === "range" ? "range" : "recent";
@@ -107,6 +109,7 @@ Deno.serve(async (request: Request) => {
     if (activeRun) return jsonResponse(request, { error: "Ya existe una sincronización en curso." }, 409);
 
     const { data: run, error: runError } = await client.from("gmail_sync_runs").insert({
+      workspace_id: workspace.id,
       trigger_type: "manual", status: "running", requested_by: admin.user.id,
       detail: { phase: "2D", mode, date_from: dateFrom, date_to: dateTo, requested_by_email: admin.email }
     }).select("id").single();
@@ -184,13 +187,13 @@ Deno.serve(async (request: Request) => {
           const documentKey = await sha256Hex([message.id, item.attachment.filename, item.sourceEntry || "", parsed.cufe || parsed.supplier_tax_id, parsed.invoice_number || "unknown"].join("|"));
           let existing: { id: string } | null = null;
           if (parsed.cufe) {
-            const { data } = await client.from("electronic_invoices").select("id").eq("cufe", parsed.cufe).limit(1).maybeSingle(); existing = data;
+            const { data } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("cufe", parsed.cufe).limit(1).maybeSingle(); existing = data;
           }
           if (!existing && parsed.supplier_tax_id && parsed.invoice_number) {
-            const { data } = await client.from("electronic_invoices").select("id").eq("supplier_tax_id", parsed.supplier_tax_id).eq("invoice_number", parsed.invoice_number).limit(1).maybeSingle(); existing = data;
+            const { data } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("supplier_tax_id", parsed.supplier_tax_id).eq("invoice_number", parsed.invoice_number).limit(1).maybeSingle(); existing = data;
           }
           if (!existing) {
-            const { data } = await client.from("electronic_invoices").select("id").eq("document_key", documentKey).limit(1).maybeSingle(); existing = data;
+            const { data } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("document_key", documentKey).limit(1).maybeSingle(); existing = data;
           }
           const row = {
             gmail_message_id: message.id,
@@ -224,7 +227,7 @@ Deno.serve(async (request: Request) => {
             if (error) throw error;
             invoicesUpdated += 1; duplicates += 1;
           } else {
-            const { error } = await client.from("electronic_invoices").insert(row);
+            const { error } = await client.from("electronic_invoices").insert({ ...row, workspace_id: workspace.id });
             if (error) throw error;
             invoicesCreated += 1;
           }
