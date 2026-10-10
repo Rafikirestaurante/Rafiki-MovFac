@@ -59,7 +59,7 @@ export default function LoginPage() {
           <div className="login-mobile-brand"><span>R</span><div><strong>Rafiki</strong><small>Movimientos y facturas</small></div></div>
           <span className="eyebrow">{mode === "login" ? "Bienvenido" : "Primer acceso"}</span>
           <h2>{mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</h2>
-          <p>{mode === "login" ? "Ingresa con el usuario autorizado para consultar la información documental." : "La primera cuenta registrada quedará como Administrador."}</p>
+          <p>{mode === "login" ? "Ingresa con tu correo autorizado para consultar tu información documental." : "La cuenta inicial crea el Administrador. Las cuentas posteriores requieren autorización previa."}</p>
 
           {!supabaseConfigured ? <Alert tone="warning">Faltan las variables de Supabase. Copia <code>.env.example</code> a <code>.env</code> y completa los datos.</Alert> : null}
           {message ? <Alert tone={tone}>{message}</Alert> : null}
