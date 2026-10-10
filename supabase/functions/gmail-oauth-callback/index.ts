@@ -49,8 +49,19 @@ Deno.serve(async (request: Request) => {
     const encrypted = await encryptSecret(tokens.refresh_token);
     const connectedAt = new Date().toISOString();
 
+    const { data: workspace, error: workspaceError } = await client
+      .from("workspaces")
+      .upsert({ owner_user_id: stateRow.user_id, name: "Mi espacio Rafiki", status: "active" }, { onConflict: "owner_user_id" })
+      .select("id")
+      .single();
+    if (workspaceError || !workspace) throw new Error(`No se pudo preparar el workspace del usuario: ${workspaceError?.message || "workspace inexistente"}`);
+    const { error: memberError } = await client
+      .from("workspace_members")
+      .upsert({ workspace_id: workspace.id, user_id: stateRow.user_id, role: "owner" }, { onConflict: "workspace_id,user_id" });
+    if (memberError) throw new Error(`No se pudo preparar la membresía del workspace: ${memberError.message}`);
     const { error: connectionError } = await client.from("gmail_connections").upsert({
       connection_key: "principal",
+      workspace_id: workspace.id,
       owner_user_id: stateRow.user_id,
       google_email: profile.emailAddress,
       google_history_id: profile.historyId || null,
