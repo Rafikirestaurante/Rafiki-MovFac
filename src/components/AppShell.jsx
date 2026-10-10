@@ -11,7 +11,7 @@ const navigation = [
 
 export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync, onToggleMovements, onToggleInvoices }) {
   const [open, setOpen] = useState(false);
-  const roleLabel = profile?.role === "admin" ? "Administrador" : "Revisor";
+  const roleLabel = profile?.role === "platform_admin" ? "Administrador de plataforma" : profile?.role === "workspace_owner" ? "Administrador del workspace" : "Revisor";
 
   function navigate(id) {
     onNavigate(id);
@@ -31,7 +31,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
         </div>
 
         <nav className="side-nav">
-          {navigation.concat(profile?.role === "admin" ? [{id:"usuarios",label:"Usuarios",icon:"users"}] : []).map((item) => (
+          {navigation.concat(profile?.role === "platform_admin" ? [{id:"usuarios",label:"Usuarios",icon:"users"}] : []).map((item) => (
             <button key={item.id} className={activePage === item.id ? "active" : ""} onClick={() => navigate(item.id)}>
               <Icon name={item.icon} size={19} />
               <span>{item.label}</span>
@@ -45,7 +45,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
             <div>
               <strong>{profile?.display_name || "Usuario"}</strong>
               <span>{profile?.email}</span>
-              <Badge tone={profile?.role === "admin" ? "gold" : "blue"}>{roleLabel}</Badge>
+              <Badge tone={profile?.role === "platform_admin" ? "gold" : "blue"}>{roleLabel}</Badge>
             </div>
           </div>
           <button className="logout-button" onClick={onLogout}><Icon name="logout" size={18} /> Cerrar sesión</button>
@@ -64,7 +64,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
       </main>
 
       <nav className="bottom-nav">
-        {navigation.concat(profile?.role === "admin" ? [{id:"usuarios",label:"Usuarios",icon:"users"}] : []).map((item) => (
+        {navigation.concat(profile?.role === "platform_admin" ? [{id:"usuarios",label:"Usuarios",icon:"users"}] : []).map((item) => (
           <button key={item.id} className={activePage === item.id ? "active" : ""} onClick={() => navigate(item.id)}>
             <Icon name={item.icon} size={20} />
             <span>{item.label}</span>

@@ -57,7 +57,7 @@ export default function App() {
   }, [session]);
 
   useEffect(() => {
-    if (!session || !profile || profile.role !== "admin") return undefined;
+    if (!session || !profile || !["platform_admin", "workspace_owner", "admin"].includes(profile.role)) return undefined;
     let disposed = false;
     let movementRunning = false;
     let invoiceRunning = false;

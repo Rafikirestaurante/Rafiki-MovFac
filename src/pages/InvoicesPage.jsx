@@ -35,7 +35,7 @@ export default function InvoicesPage({ profile, syncIndicator }) {
   const [fileType, setFileType] = useState("all");
   const [dateFrom, setDateFrom] = useState(bogotaDay(-30));
   const [dateTo, setDateTo] = useState(bogotaDay());
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = ["platform_admin", "workspace_owner", "admin"].includes(profile?.role);
 
   async function load() {
     setLoading(true); setError("");
@@ -145,3 +145,4 @@ export default function InvoicesPage({ profile, syncIndicator }) {
     </>
   );
 }
+

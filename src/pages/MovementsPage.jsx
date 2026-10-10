@@ -77,7 +77,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
   const [syncMessage, setSyncMessage] = useState("");
   const [syncTone, setSyncTone] = useState("info");
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = ["platform_admin", "workspace_owner", "admin"].includes(profile?.role);
 
   async function load() {
     setLoading(true);
@@ -243,5 +243,6 @@ export default function MovementsPage({ profile, syncIndicator }) {
     </>
   );
 }
+
 
 

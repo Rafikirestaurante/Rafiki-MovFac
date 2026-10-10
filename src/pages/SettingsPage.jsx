@@ -49,7 +49,7 @@ export default function SettingsPage({ profile }) {
   const [employeeMessage, setEmployeeMessage] = useState("");
   const [employeeTone, setEmployeeTone] = useState("info");
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = ["platform_admin", "workspace_owner", "admin"].includes(profile?.role);
   const connection = status.connection;
   const statusUnavailable = Boolean(status.unavailable);
   const connected = Boolean(!statusUnavailable && status.configured && connection?.status === "connected");
@@ -442,3 +442,4 @@ export default function SettingsPage({ profile }) {
     </>
   );
 }
+

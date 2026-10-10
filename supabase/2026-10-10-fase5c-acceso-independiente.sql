@@ -9,7 +9,7 @@ begin
     raise exception 'Este correo no esta autorizado para utilizar Rafiki MF';
   end if;
   insert into public.app_users(id,email,display_name,role,status)
-    values(new.id,email_value,trim(coalesce(new.raw_user_meta_data->>'display_name','')),'reviewer','active')
+    values(new.id,email_value,trim(coalesce(new.raw_user_meta_data->>'display_name','')),'workspace_owner','active')
     on conflict(id) do nothing;
   insert into public.workspaces(owner_user_id,name) values(new.id,'Mi espacio Rafiki') on conflict(owner_user_id) do nothing returning id into ws;
   if ws is null then select id into ws from public.workspaces where owner_user_id=new.id; end if;
