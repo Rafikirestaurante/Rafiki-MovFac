@@ -87,11 +87,12 @@ export default function App() {
       } catch { if (!disposed) setAutoSync((v) => ({ ...v, invoices: { active: false, lastRun: new Date(), message: "" } })); }
       finally { invoiceRunning = false; }
     };
-    if (movementsAutoEnabled) syncMovements();
-    if (invoicesAutoEnabled) syncInvoices();
+    // Deja que la sesión y la pestaña inicial terminen de cargar antes de consultar Gmail.
+    const initialMovementTimer = movementsAutoEnabled ? window.setTimeout(syncMovements, 10000) : null;
+    const initialInvoiceTimer = invoicesAutoEnabled ? window.setTimeout(syncInvoices, 10000) : null;
     const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, 10000) : null;
     const invoiceTimer = invoicesAutoEnabled ? window.setInterval(syncInvoices, 60000) : null;
-    return () => { disposed = true; window.clearInterval(movementTimer); window.clearInterval(invoiceTimer); };
+    return () => { disposed = true; window.clearTimeout(initialMovementTimer); window.clearTimeout(initialInvoiceTimer); window.clearInterval(movementTimer); window.clearInterval(invoiceTimer); };
   }, [session, profile, movementsAutoEnabled, invoicesAutoEnabled]);
 
   function toggleMovementsAutoSync() {
