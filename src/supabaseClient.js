@@ -7,7 +7,7 @@ export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 const fetchWithTimeout = (input, init = {}) => {
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 20000);
+  const timer = window.setTimeout(() => controller.abort(), 120000);
   return fetch(input, { ...init, signal: init.signal || controller.signal })
     .finally(() => window.clearTimeout(timer));
 };
@@ -22,3 +22,4 @@ export const supabase = supabaseConfigured
       global: { fetch: fetchWithTimeout }
     })
   : null;
+

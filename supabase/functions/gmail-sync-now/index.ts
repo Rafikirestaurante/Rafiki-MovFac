@@ -3,7 +3,7 @@ import { jsonResponse, errorMessage } from "../_shared/http.ts";
 import { decryptSecret } from "../_shared/crypto.ts";
 import { refreshGoogleAccessToken } from "../_shared/google.ts";
 import { adminClient, requireAppAdmin } from "../_shared/supabase.ts";
-import { clientKeyFromRequest, requireEmployeeSession } from "../_shared/employeeAccess.ts";
+
 import {
   BANCOLOMBIA_EXTRACTOR_VERSION,
   extractBancolombiaMovement,
@@ -107,24 +107,10 @@ Deno.serve(async (request: Request) => {
     const requestedQuickHours = Number(body.quick_hours ?? 1);
     const quickHours = [1, 6, 24].includes(requestedQuickHours) ? requestedQuickHours : 1;
     const quickMessageLimit = quickHours === 24 ? 500 : quickHours === 6 ? 120 : 20;
-    const employeeToken = String(request.headers.get("x-employee-access-token") || "").trim();
-    if (employeeToken) {
-      operationClient = adminClient();
-      const { session } = await requireEmployeeSession(request, operationClient);
-      publicEmployeeAccess = true;
-      publicClientKey = await clientKeyFromRequest(request);
-      actorEmail = `empleado-publico:${session.username}`;
-
-      await operationClient.from("employee_public_access_log").insert({
-        action: "sync_requested", success: true, client_key: publicClientKey,
-        access_username: session.username, detail: { phase: "3A.3", quick_hours: quickHours, quick_message_limit: quickMessageLimit }
-      });
-    } else {
-      admin = await requireAppAdmin(request);
-      operationClient = admin.client as ReturnType<typeof adminClient>;
-      actorUserId = admin.user.id;
-      actorEmail = admin.email;
-    }
+    const context = await requireAppAdmin(request);
+    operationClient = context.client;
+    actorUserId = context.user.id;
+    actorEmail = context.email;
     if (!operationClient) throw new Error("No se pudo establecer el contexto de sincronización.");
     const client = operationClient;
     const { data: workspace, error: workspaceError } = await client.from("workspaces").select("id").eq("owner_user_id", actorUserId).maybeSingle();
@@ -142,7 +128,7 @@ Deno.serve(async (request: Request) => {
     if (dateFrom > dateTo) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
 
     const staleLimit = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { data: activeRun, error: activeError } = await client.from("gmail_sync_runs").select("id,started_at").eq("status", "running").gte("started_at", staleLimit).limit(1).maybeSingle();
+    const { data: activeRun, error: activeError } = await client.from("gmail_sync_runs").select("id,started_at").eq("workspace_id", workspaceId).eq("status", "running").gte("started_at", staleLimit).limit(1).maybeSingle();
     if (activeError) throw new Error(`No se pudo validar sincronizaciones activas: ${activeError.message}`);
     if (activeRun) return jsonResponse(request, { error: "Ya existe una sincronización en curso. Intenta nuevamente cuando finalice.", active_run_id: activeRun.id }, 409);
 
@@ -223,7 +209,7 @@ Deno.serve(async (request: Request) => {
           sync_mode: syncMode,
           quick_hours: syncMode === "quick" ? quickHours : null
         };
-        const candidateRow = {
+        const candidateRow = { workspace_id: workspaceId,
           gmail_message_id: message.id,
           gmail_thread_id: message.threadId || ref.threadId || null,
           sync_run_id: syncRunId,
@@ -236,13 +222,13 @@ Deno.serve(async (request: Request) => {
           raw_metadata: baseMetadata,
           last_detected_at: new Date().toISOString()
         };
-        const { data: existingCandidate, error: existingCandidateError } = await client.from("gmail_sync_candidates").select("id,processing_status,raw_metadata").eq("gmail_message_id", message.id).maybeSingle();
+        const { data: existingCandidate, error: existingCandidateError } = await client.from("gmail_sync_candidates").select("id,processing_status,raw_metadata").eq("workspace_id", workspaceId).eq("gmail_message_id", message.id).maybeSingle();
         if (existingCandidateError) throw existingCandidateError;
         const { error: saveCandidateError } = await client.from("gmail_sync_candidates").upsert({
           ...candidateRow,
           processing_status: existingCandidate?.processing_status || "candidate",
           raw_metadata: { ...(existingCandidate?.raw_metadata || {}), ...baseMetadata }
-        }, { onConflict: "gmail_message_id" });
+        }, { onConflict: "workspace_id,gmail_message_id" });
         if (saveCandidateError) throw saveCandidateError;
         if (existingCandidate) candidateDuplicates += 1; else candidatesCreated += 1;
 
@@ -277,7 +263,7 @@ Deno.serve(async (request: Request) => {
                 registered_at: new Date().toISOString(),
                 extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION
               }
-            }).eq("gmail_message_id", message.id);
+            }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
             continue;
           }
 
@@ -293,7 +279,7 @@ Deno.serve(async (request: Request) => {
           const { data: existingMovement, error: existingMovementError } = await client.from("financial_movements")
             .select("id,source_metadata")
             .eq("workspace_id", workspaceId)
-            .eq("gmail_message_id", message.id)
+            .eq("workspace_id", workspaceId).eq("gmail_message_id", message.id)
             .eq("movement_type", extraction.movement_type)
             .maybeSingle();
           if (existingMovementError) throw existingMovementError;
@@ -369,13 +355,13 @@ Deno.serve(async (request: Request) => {
               movement_type: extraction.movement_type,
               extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION
             }
-          }).eq("gmail_message_id", message.id);
+          }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
         } catch (extractionError) {
           errors += 1;
           await client.from("gmail_sync_candidates").update({
             processing_status: "error",
             raw_metadata: { ...baseMetadata, source_detected: "bancolombia", extraction_result: "error", requires_review: true, registered_at: new Date().toISOString(), extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION, error: errorMessage(extractionError) }
-          }).eq("gmail_message_id", message.id);
+          }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
           await client.from("processing_errors").insert({
             sync_run_id: syncRunId,
             gmail_message_id: ref.id,
@@ -485,6 +471,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
   }
 });
+
 
 
 

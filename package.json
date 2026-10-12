@@ -1,7 +1,7 @@
 {
   "name": "rafiki-movimientos-facturas",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.8.9",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -27,3 +27,4 @@
     "vitest": "^2.1.8"
   }
 }
+
