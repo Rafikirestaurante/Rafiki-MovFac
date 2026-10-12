@@ -3,6 +3,7 @@ import Icon from "../components/Icons.jsx";
 import { Alert, EmptyState, PageHeader } from "../components/Ui.jsx";
 import { syncGmailNow, syncGmailQuick } from "../services/gmailIntegrationService.js";
 import { getFinancialMovements } from "../services/movementService.js";
+import SyncDiagnostic from "../components/SyncDiagnostic.jsx";
 
 const typeLabels = {
   income: "Ingreso",
@@ -165,6 +166,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
 
       <details className="movement-options">
         <summary>Opciones</summary>
+        <SyncDiagnostic />
       <details className="quick-movement-sync-card manual-sync-group">
         <summary>Sincronización manual</summary>
         <div className="movement-sync-copy">
