@@ -6,6 +6,7 @@ import { adminClient, requireAppAdmin } from "../_shared/supabase.ts";
 
 import {
   BANCOLOMBIA_EXTRACTOR_VERSION,
+  BANCOLOMBIA_SENDER_QUERY,
   extractBancolombiaMovement,
   flattenText,
   htmlToText,
@@ -163,7 +164,7 @@ Deno.serve(async (request: Request) => {
     const endExclusive = new Date(`${dateTo}T00:00:00-05:00`);
     endExclusive.setDate(endExclusive.getDate() + 1);
     const before = endExclusive.toISOString().slice(0, 10).replaceAll("-", "/");
-    const senderFilter = "from:alertasynotificaciones@an.notificacionesbancolombia.com";
+    const senderFilter = BANCOLOMBIA_SENDER_QUERY;
     const queryText = syncMode === "quick"
       ? `${senderFilter} after:${Math.floor(quickStart.getTime() / 1000)}`
       : `after:${after} before:${before}`;

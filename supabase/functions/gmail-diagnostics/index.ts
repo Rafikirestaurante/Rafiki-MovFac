@@ -17,7 +17,7 @@ type GmailListResponse = {
   resultSizeEstimate?: number;
 };
 
-const BANCOLOMBIA_SENDER = "alertasynotificaciones@an.notificacionesbancolombia.com";
+import { BANCOLOMBIA_SENDER_QUERY } from "../_shared/bancolombia.ts";
 
 function friendlyError(value: unknown): string {
   const detail = errorMessage(value);
@@ -31,7 +31,7 @@ function friendlyError(value: unknown): string {
 }
 
 async function gmailSearch(accessToken: string): Promise<GmailListResponse> {
-  const query = encodeURIComponent(`from:${BANCOLOMBIA_SENDER} newer_than:30d`);
+  const query = encodeURIComponent(`${BANCOLOMBIA_SENDER_QUERY} newer_than:30d`);
   const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=1`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });

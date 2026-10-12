@@ -1,4 +1,9 @@
 export const BANCOLOMBIA_ALERT_EMAIL = "alertasynotificaciones@an.notificacionesbancolombia.com";
+export const BANCOLOMBIA_ALERT_EMAILS = [
+  BANCOLOMBIA_ALERT_EMAIL,
+  "alertasynotificaciones@ayn.notificacionesbancolombia.com"
+];
+export const BANCOLOMBIA_SENDER_QUERY = `{${BANCOLOMBIA_ALERT_EMAILS.map(email => `from:${email}`).join(" ")}}`;
 export const BANCOLOMBIA_EXTRACTOR_VERSION = "bancolombia-3A2-v3";
 
 export type BancolombiaMovementType = "income" | "transfer" | "card_purchase";
@@ -46,7 +51,7 @@ export function senderEmail(value: unknown): string {
 }
 
 export function isBancolombiaSender(value: unknown): boolean {
-  return senderEmail(value) === BANCOLOMBIA_ALERT_EMAIL;
+  return BANCOLOMBIA_ALERT_EMAILS.includes(senderEmail(value));
 }
 
 function decodeHtmlEntity(entity: string): string {

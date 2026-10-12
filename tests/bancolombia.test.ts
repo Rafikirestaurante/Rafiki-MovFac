@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BANCOLOMBIA_SENDER_QUERY,
   extractBancolombiaMovement,
   extractTransactionDate,
   extractTransactionDateTime,
@@ -10,6 +11,14 @@ import {
 } from "../supabase/functions/_shared/bancolombia.ts";
 
 describe("Bancolombia parser", () => {
+  it("busca ambos remitentes con una sola consulta OR", () => {
+    expect(BANCOLOMBIA_SENDER_QUERY).toBe("{from:alertasynotificaciones@an.notificacionesbancolombia.com from:alertasynotificaciones@ayn.notificacionesbancolombia.com}");
+  });
+  it("acepta el nuevo remitente y rechaza dominios parecidos", () => {
+    expect(isBancolombiaSender("Bancolombia <ALERTASYNOTIFICACIONES@AYN.NOTIFICACIONESBANCOLOMBIA.COM>")).toBe(true);
+    expect(isBancolombiaSender("alertasynotificaciones@ayn.notificacionesbancolombia.com.ejemplo.com")).toBe(false);
+    expect(isBancolombiaSender("otro@ayn.notificacionesbancolombia.com")).toBe(false);
+  });
   it("normaliza remitentes con nombre visible", () => {
     const header = "Bancolombia <alertasynotificaciones@an.notificacionesbancolombia.com>";
     expect(senderEmail(header)).toBe("alertasynotificaciones@an.notificacionesbancolombia.com");
