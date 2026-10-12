@@ -12,7 +12,7 @@ describe('Inicio atómico por workspace',()=>{
   const response=await handler(new Request('https://test/sync',{method:'POST',headers:{authorization:'workspace-B','content-type':'application/json'},body:JSON.stringify({workspace_id:'workspace-A',mode:'quick',banks:['bancolombia']})}));
   expect(response.status).toBe(409);
   expect(await response.json()).toMatchObject({active_run_id:99});
-  expect(mocks.rpc).toHaveBeenCalledWith('begin_workspace_sync',expect.objectContaining({p_workspace:'workspace-B',p_user:'workspace-B'}));
+  expect(mocks.rpc).toHaveBeenCalledWith('claim_sync_batch',expect.objectContaining({p_workspace:'workspace-B',p_user:'workspace-B'}));
   expect(mocks.from).not.toHaveBeenCalled();
  });
 });

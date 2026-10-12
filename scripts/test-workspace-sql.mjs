@@ -79,5 +79,43 @@ await db.exec(`reset role; insert into authorized_users(email) values('allowed@e
 await db.exec(`insert into auth.users(id,email) values('00000000-0000-0000-0000-000000000003','allowed@example.test')`);
 check((await db.query(`select role from app_users where id='00000000-0000-0000-0000-000000000003'`)).rows[0].role,'workspace_owner');
 await assert.rejects(()=>db.exec(`insert into auth.users(id,email) values('00000000-0000-0000-0000-000000000004','denied@example.test')`));checks++;
-console.log(`${checks} comprobaciones PostgreSQL aprobadas: dos cuentas, políticas antiguas, credenciales, preferencias, bloqueo, expiración y registro autorizado. No usa Supabase real.`);
+await db.exec(`reset role; update app_users set status='active'; update authorized_users set status='active'; update gmail_sync_runs set status='success';
+alter table financial_movements add column source text,add column transaction_date date,add column transaction_at timestamptz,add column detail text,add column amount_cop numeric,add column reference_text text;
+insert into financial_movements(workspace_id,source,movement_type,transaction_date,amount_cop,detail) values
+('${A}','nequi','income','2026-10-12',1500,'ARACELY'),('${A}','bancolombia','transfer','2026-10-12',500,'Pago'),('${B}','nequi','income','2026-10-12',999999,'Otra cuenta');`);
+for(const migration of ['supabase/2026-10-12-fase5g-batches.sql','supabase/2026-10-12-fase5i-reports.sql']) {
+ await db.exec(fs.readFileSync(migration,'utf8'));await db.exec(fs.readFileSync(migration,'utf8'));
+}
+await role(A,'service_role');
+const claim=async(user,kind='movements',id=null)=>(await db.query(`select claim_sync_batch('${user}','${user}','${kind}','{"mode":"quick"}',${id??'null'}) r`)).rows[0].r;
+const job=await claim(A);check(Boolean(job.lease),true);
+check((await claim(A)).busy,true);
+const other=await claim(B);check(Boolean(other.lease),true);
+await assert.rejects(()=>claim(B,'movements',job.id));checks++;
+await assert.rejects(()=>db.query(`select save_sync_batch(${job.id},gen_random_uuid(),'{}',true,false)`));checks++;
+await db.query(`select save_sync_batch(${job.id},'${job.lease}','{"refs":[{"id":"x"},{"id":"y"}],"offset":1,"stats":{"messagesScanned":1,"movementsCreated":1}}',true,false)`);
+const resumed=await claim(A,'movements',job.id);check(resumed.state.offset,1);
+await assert.rejects(()=>db.query(`select save_sync_batch(${job.id},'${job.lease}','{}',true,false)`));checks++;
+await db.exec(`reset role;update gmail_sync_jobs set lease_until=now()-interval '1 second' where run_id=${job.id};`);
+await role(A,'service_role');const expired=await claim(A,'movements',job.id);check(Boolean(expired.lease),true);check(expired.state.offset,1);
+await role(A);check((await db.query('select pending_workspace_sync() r')).rows[0].r.id,job.id);
+await assert.rejects(()=>db.query('select * from gmail_sync_jobs'));checks++;
+await assert.rejects(()=>claim(A));checks++;
+const report=async args=>(await db.query(`select workspace_movement_report('2026-10-01','2026-10-12',${args}) r`)).rows[0].r;
+const all=await report("null,null,'',null,null,0,1");check(all.total,2);check(all.rows.length,1);check(all.income,1500);check(all.expense,500);check(all.balance,1000);
+check((await report("'nequi',null,'aracely',1000,2000,0,50")).total,1);
+check((await report("null,null,'otra cuenta',null,null,0,50")).total,0);
+check((await report("null,null,'',null,null,1,1")).rows.length,1);
+await role(B);check((await report("null,null,'',null,null,0,50")).income,999999);
+await db.exec(`reset role;update authorized_users set status='inactive' where email='b@example.test';`);
+await role(B);check((await report("null,null,'',null,null,0,50")).total,0);check((await db.query('select pending_workspace_sync() r')).rows[0].r,null);
+await role(A,'service_role');await db.query(`select save_sync_batch(${job.id},'${expired.lease}','{"refs":[{"id":"x"},{"id":"y"}],"offset":2,"stats":{"messagesScanned":2,"movementsCreated":1}}',true,true)`);
+check((await claim(A,'movements',job.id)).completed,true);
+await role(A);check((await db.query('select pending_workspace_sync() r')).rows[0].r,null);
+await role(A,'service_role');const cancelled=await claim(A);
+await role(B);await assert.rejects(()=>db.query(`select cancel_workspace_sync(${cancelled.id})`));checks++;
+await role(A);await assert.rejects(()=>db.query(`select cancel_workspace_sync(${cancelled.id})`));checks++;
+await db.exec(`reset role;update gmail_sync_jobs set lease_until=null where run_id=${cancelled.id}`);
+await role(A);await db.query(`select cancel_workspace_sync(${cancelled.id})`);check((await db.query('select pending_workspace_sync() r')).rows[0].r,null);
+console.log(`${checks} comprobaciones PostgreSQL aprobadas: aislamiento, lotes, reservas, recuperación y reportes. No usa Supabase real.`);
 await db.close();

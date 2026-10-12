@@ -125,7 +125,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
       const usedHours = Number(data.quick_hours || hours);
       const limit = Number(data.quick_message_limit || (usedHours === 6 ? 120 : usedHours === 3 ? 60 : 20));
       setSyncTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setSyncMessage(`Búsqueda de ${usedHours} ${usedHours === 1 ? "hora" : "horas"} completada: ${data.messages_scanned || data.messages_found || 0} de hasta ${limit} alertas de los bancos seleccionados revisadas, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
+      setSyncMessage(`Búsqueda de ${usedHours} ${usedHours === 1 ? "hora" : "horas"} completada: ${data.messages_scanned || data.messages_found || 0} de hasta ${limit} alertas de los bancos seleccionados revisadas, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.` + (data.truncated ? ' Se alcanzó el límite de correos; reduce el rango para consultar los restantes.' : '')); 
       await load();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (syncError) {
@@ -143,7 +143,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
     try {
       const data = await syncGmailNow(dateFrom, dateTo);
       setSyncTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setSyncMessage(`Sincronización terminada: ${data.messages_found || 0} correos consultados, ${data.bancolombia_emails || 0} de los bancos seleccionados y ${data.movements_created || 0} movimientos nuevos.`);
+      setSyncMessage(`Sincronización terminada: ${data.messages_found || 0} correos consultados, ${data.bancolombia_emails || 0} de los bancos seleccionados y ${data.movements_created || 0} movimientos nuevos.` + (data.truncated ? ' Se alcanzó el límite de correos; reduce el rango para consultar los restantes.' : '')); 
       await load();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (syncError) {

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import SyncRecovery from "../components/SyncRecovery.jsx";
 import SyncDiagnostic from "../components/SyncDiagnostic.jsx";
 import Icon from "../components/Icons.jsx";
 import { Alert, Badge, PageHeader } from "../components/Ui.jsx";
@@ -212,7 +213,7 @@ export default function SettingsPage({ profile }) {
     try {
       const data = await syncGmailQuick();
       setTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setMessage(`Búsqueda rápida completada: ${data.messages_scanned || data.messages_found || 0} de hasta 20 alertas de los bancos seleccionados revisadas durante la última hora, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
+      setMessage(`Búsqueda rápida completada: ${data.messages_scanned || data.messages_found || 0} de hasta 20 alertas de los bancos seleccionados revisadas durante la última hora, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.` + (data.truncated ? ' Se alcanzó el límite de correos; reduce el rango para consultar los restantes.' : '')); 
       await load();
     } catch (error) {
       setTone("danger");
@@ -228,7 +229,7 @@ export default function SettingsPage({ profile }) {
     try {
       const data = await syncGmailNow(dateFrom, dateTo);
       setTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setMessage(`Sincronización terminada: ${data.messages_found || 0} correos revisados, ${data.bancolombia_emails || 0} de los bancos seleccionados y ${data.movements_created || 0} movimientos nuevos.`);
+      setMessage(`Sincronización terminada: ${data.messages_found || 0} correos revisados, ${data.bancolombia_emails || 0} de los bancos seleccionados y ${data.movements_created || 0} movimientos nuevos.` + (data.truncated ? ' Se alcanzó el límite de correos; reduce el rango para consultar los restantes.' : '')); 
       await load();
     } catch (error) {
       setTone("danger");
@@ -430,7 +431,7 @@ export default function SettingsPage({ profile }) {
         {statusUnavailable ? <Alert tone="danger">La sincronización está bloqueada porque no se pudo comprobar la comunicación con las Edge Functions. Ejecuta “Diagnosticar comunicación”.</Alert> : !canAttemptGmail ? <Alert tone="warning">Conecta Gmail antes de ejecutar una sincronización.</Alert> : null}
       </section>
 
-      <SyncDiagnostic />
+      <SyncDiagnostic /><SyncRecovery/>
 
       {confirmDisconnect ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setConfirmDisconnect(false)}>

@@ -716,3 +716,10 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 
 .sync-diagnostic { margin: 0 0 16px; }
 .sync-diagnostic > summary { cursor: pointer; font-size: 16px; font-weight: 700; }
+
+.report-filters {display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;padding:20px;margin-bottom:20px;align-items:end}
+.report-filters label {display:grid;gap:6px;font-size:14px}
+.report-filters input,.report-filters select {width:100%;padding:10px;border:1px solid #d8dfe7;border-radius:8px;background:white;color:#172a3a}
+.report-result {padding:20px;margin-top:20px}.report-result table{width:100%;border-collapse:collapse}.report-result th,.report-result td{padding:12px;text-align:left;border-bottom:1px solid #e5e7eb}.report-result .table-wrap{overflow:auto}
+.report-pagination{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:20px}.sync-recovery{padding:16px;margin:12px 0}
+@media(max-width:680px){.bottom-nav{overflow-x:auto;justify-content:flex-start}.bottom-nav button{min-width:70px;flex:1 0 auto}.report-filters{grid-template-columns:1fr 1fr}}

@@ -6,6 +6,7 @@ const navigation = [
   { id: "inicio", label: "Inicio", icon: "home" },
   { id: "movimientos", label: "Movimientos", icon: "movements" },
   { id: "facturas", label: "Facturas", icon: "invoice" },
+  { id: "reportes", label: "Reportes", icon: "search" },
   { id: "configuracion", label: "Configuración", icon: "settings" }
 ];
 

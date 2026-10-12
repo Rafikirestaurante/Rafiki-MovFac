@@ -55,7 +55,7 @@ export default function InvoicesPage({ profile, syncIndicator }) {
     try {
       const data = await syncInvoicesRecent();
       setTone(data.errors_count || data.incomplete_documents ? "warning" : "success");
-      setMessage(`Búsqueda terminada: ${data.messages_scanned || 0} correos revisados, ${data.attachments_scanned || 0} adjuntos, ${data.invoices_created || 0} facturas nuevas, ${data.invoices_updated || 0} actualizadas y ${data.incomplete_documents || 0} documentos incompletos.`);
+      setMessage(`Búsqueda terminada: ${data.messages_scanned || 0} correos revisados, ${data.attachments_scanned || 0} adjuntos, ${data.invoices_created || 0} facturas nuevas, ${data.invoices_updated || 0} actualizadas y ${data.incomplete_documents || 0} documentos incompletos.` + (data.truncated ? ' Se alcanzó el límite de correos; reduce el rango para consultar los restantes.' : '')); 
       await load();
     } catch (syncError) { setTone("danger"); setMessage(syncError.message || "No se pudieron buscar facturas."); }
     finally { setSyncing(false); }
@@ -65,7 +65,7 @@ export default function InvoicesPage({ profile, syncIndicator }) {
     try {
       const data = await syncInvoicesRange(dateFrom, dateTo);
       setTone(data.errors_count || data.incomplete_documents ? "warning" : "success");
-      setMessage(`Búsqueda histórica terminada: ${data.messages_scanned || 0} correos revisados y ${data.invoices_created || 0} facturas nuevas.`);
+      setMessage(`Búsqueda histórica terminada: ${data.messages_scanned || 0} correos revisados y ${data.invoices_created || 0} facturas nuevas.` + (data.truncated ? ' Se alcanzó el límite de correos; reduce el rango para consultar los restantes.' : '')); 
       await load();
     } catch (syncError) { setTone("danger"); setMessage(syncError.message || "No se pudieron buscar facturas."); }
     finally { setSyncing(false); }

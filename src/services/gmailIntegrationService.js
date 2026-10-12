@@ -101,10 +101,35 @@ export const startGmailConnection = () => invoke("gmail-oauth-start");
 export const testGmailConnection = () => invoke("gmail-test-connection");
 export const diagnoseGmailConnection = () => invoke("gmail-diagnostics");
 export const disconnectGmail = () => invoke("gmail-disconnect");
-export const syncGmailNow = (dateFrom, dateTo) => invoke("gmail-sync-now", { mode: "range", date_from: dateFrom, date_to: dateTo });
-export const syncGmailQuick = (hours = 1) => invoke("gmail-sync-now", { mode: "quick", quick_hours: hours });
-export const syncInvoicesRecent = () => invoke("gmail-sync-invoices", { mode: "recent" });
-export const syncInvoicesRange = (dateFrom, dateTo) => invoke("gmail-sync-invoices", { mode: "range", date_from: dateFrom, date_to: dateTo });
+export async function runSyncBatches(name,body) {
+  if(isGmailSyncBusy()) throw new Error('Ya hay una sincronización en curso en este navegador.');
+  activeSyncRequests++;
+  try {
+    let request=body;
+    for(let batch=0;batch<501;batch++) {
+      const data=await invoke(name,request);
+      if(typeof window!=='undefined') window.dispatchEvent(new CustomEvent('rafiki:sync-progress',{detail:{...data,function_name:name}}));
+      if(!data.has_more) return data;
+      request={resume_run_id:data.sync_run_id};
+    }
+    throw new Error('La sincronización tiene avance guardado. Continúa desde Configuración.');
+  } finally {activeSyncRequests--;}
+}
+export const syncGmailNow = (dateFrom, dateTo) => runSyncBatches("gmail-sync-now", { mode: "range", date_from: dateFrom, date_to: dateTo });
+export const syncGmailQuick = (hours = 1) => runSyncBatches("gmail-sync-now", { mode: "quick", quick_hours: hours });
+export const syncInvoicesRecent = () => runSyncBatches("gmail-sync-invoices", { mode: "recent" });
+export const syncInvoicesRange = (dateFrom, dateTo) => runSyncBatches("gmail-sync-invoices", { mode: "range", date_from: dateFrom, date_to: dateTo });
+export async function getPendingSync() {
+  if(!supabaseConfigured || !supabase) throw new Error('Supabase todavía no está configurado.');
+  const {data,error}=await supabase.rpc('pending_workspace_sync');
+  if(error) throw new Error(error.message);
+  return data;
+}
+export const resumePendingSync = job => runSyncBatches(job.kind==='invoices'?'gmail-sync-invoices':'gmail-sync-now',{resume_run_id:job.id});
+export async function cancelPendingSync(id) {
+  const {error}=await supabase.rpc('cancel_workspace_sync',{p_run:id});
+  if(error) throw new Error(error.message);
+}
 
 export async function getRecentSyncRuns(limit = 10) {
   if (!supabaseConfigured || !supabase) throw new Error("Supabase todavía no está configurado.");

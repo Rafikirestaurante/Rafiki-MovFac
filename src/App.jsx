@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import MovementsPage from "./pages/MovementsPage.jsx";
 import InvoicesPage from "./pages/InvoicesPage.jsx";
+import ReportsPage from "./pages/ReportsPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import UserAdminPage from "./pages/UserAdminPage.jsx";
 import { Alert } from "./components/Ui.jsx";
@@ -14,6 +15,7 @@ const pages = {
   inicio: DashboardPage,
   movimientos: MovementsPage,
   facturas: InvoicesPage,
+  reportes: ReportsPage,
   configuracion: SettingsPage
   ,usuarios: UserAdminPage
 };
