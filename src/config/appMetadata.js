@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.8.11";
+export const APP_VERSION = "1.8.12";
 export const APP_PHASE = "Fase 5E";
 export const APP_PHASE_TITLE = "Estabilización y diagnóstico de sincronización";
 export const APP_PHASE_DESCRIPTION =

@@ -713,3 +713,6 @@ html[data-surface="employees"] body { background: #f4f7fa; }
 @media (min-width:900px) { .module-sync-indicator { display:inline-flex; width:auto; padding:4px 7px; margin-bottom:8px; font-size:9px; } .module-sync-indicator .sync-dot { width:6px; height:6px; } .auto-sync-control { padding:5px 8px; margin-bottom:8px; font-size:9px; } }
 .manual-sync-group, .employee-manual-sync { border:1px solid var(--line); border-radius:10px; padding:0 12px 12px; }
 .manual-sync-group > summary, .employee-manual-sync > summary { cursor:pointer; padding:11px 0; font-weight:800; color:var(--ink); }
+
+.sync-diagnostic { margin: 0 0 16px; }
+.sync-diagnostic > summary { cursor: pointer; font-size: 16px; font-weight: 700; }

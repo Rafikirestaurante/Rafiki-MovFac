@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import SyncDiagnostic from "../components/SyncDiagnostic.jsx";
 import Icon from "../components/Icons.jsx";
 import { Alert, Badge, PageHeader } from "../components/Ui.jsx";
 import {
@@ -286,6 +287,8 @@ export default function SettingsPage({ profile }) {
   return (
     <>
       <PageHeader eyebrow="Administración" title="Configuración" description="Conexiones, seguridad y estado técnico de la aplicación." />
+
+      <SyncDiagnostic />
 
       {!isAdmin ? <Alert tone="warning">Solo un Administrador puede configurar la conexión con Gmail.</Alert> : null}
       {message ? <Alert tone={tone}>{message}</Alert> : null}
