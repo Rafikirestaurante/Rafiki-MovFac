@@ -40,7 +40,13 @@ Deno.serve(async (request: Request) => {
     if (error) throw new Error(`No se pudo validar la autorización: ${error.message}`);
     if (!data) throw new Error("La autorización venció, ya fue usada o no pertenece a esta aplicación.");
     stateRow = data;
+    const {data: activeUser,error: activeUserError} = await client.from("app_users").select("role,status").eq("id",stateRow.user_id).maybeSingle();
+    if(activeUserError || activeUser?.status !== "active" || !["platform_admin","workspace_owner","admin"].includes(activeUser?.role)) throw new Error("Usuario no autorizado para conectar Gmail.");
 
+    if(stateRow.user_email.toLowerCase() !== "rafiki.restaurante@gmail.com") {
+      const {data:authorization,error:authorizationError}=await client.from("authorized_users").select("id").eq("email",stateRow.user_email.toLowerCase()).eq("status","active").maybeSingle();
+      if(authorizationError || !authorization) throw new Error("La autorización de este usuario fue retirada.");
+    }
     const tokens = await exchangeAuthorizationCode(code);
     if (!tokens.access_token) throw new Error("Google no devolvió un access token válido.");
     if (!tokens.refresh_token) throw new Error("Google no devolvió el refresh token. Retira el acceso previo en Google y vuelve a conectar.");
@@ -51,9 +57,8 @@ Deno.serve(async (request: Request) => {
 
     const { data: workspace, error: workspaceError } = await client
       .from("workspaces")
-      .upsert({ owner_user_id: stateRow.user_id, name: "Mi espacio Rafiki", status: "active" }, { onConflict: "owner_user_id" })
-      .select("id")
-      .single();
+      .select("id").eq("owner_user_id",stateRow.user_id).eq("status","active")
+      .maybeSingle();
     if (workspaceError || !workspace) throw new Error(`No se pudo preparar el workspace del usuario: ${workspaceError?.message || "workspace inexistente"}`);
     const { error: memberError } = await client
       .from("workspace_members")
@@ -78,6 +83,7 @@ Deno.serve(async (request: Request) => {
     if (connectionError) throw new Error(`No se pudo guardar la conexión: ${connectionError.message}`);
 
     await client.from("gmail_integration_audit").insert({
+      workspace_id: workspace.id,
       event_type: "oauth_connected",
       user_id: stateRow.user_id,
       user_email: stateRow.user_email,

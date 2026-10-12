@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Icon from "../components/Icons.jsx";
-import { getSelectedBanks, saveSelectedBanks } from "../services/bankPreferences.js";
+import { loadWorkspaceBanks, saveWorkspaceBanks } from "../services/bankPreferences.js";
 import { Alert, EmptyState, PageHeader } from "../components/Ui.jsx";
 import { syncGmailNow, syncGmailQuick } from "../services/gmailIntegrationService.js";
 import { getFinancialMovements } from "../services/movementService.js";
@@ -66,12 +66,21 @@ function MovementAmount({ row }) {
 }
 
 export default function MovementsPage({ profile, syncIndicator }) {
-  const [banks,setBanks] = useState(() => getSelectedBanks(profile?.id));
-  function toggleBank(bank) {
+  const [banks,setBanks] = useState(["bancolombia"]);
+  const [banksBusy,setBanksBusy] = useState(true);
+  const [banksError,setBanksError] = useState("");
+  useEffect(() => {
+    let active=true;
+    loadWorkspaceBanks().then(data=>{if(active)setBanks(data);}).catch(e=>{if(active)setBanksError(e.message);}).finally(()=>{if(active)setBanksBusy(false);});
+    return ()=>{active=false;};
+  },[profile?.id]);
+  async function toggleBank(bank) {
     const next = banks.includes(bank) ? banks.filter(item => item !== bank) : [...banks,bank];
     if (!next.length) return;
-    saveSelectedBanks(profile?.id,next);
-    setBanks(next);
+    setBanksBusy(true); setBanksError("");
+    try { await saveWorkspaceBanks(next); setBanks(next); }
+    catch(e){setBanksError(e.message);}
+    finally {setBanksBusy(false);}
   }
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +184,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
 
       <details className="movement-options">
         <summary>Opciones</summary>
-        <fieldset disabled={syncing}><legend>Bancos para sincronizar</legend>{[["bancolombia","Bancolombia"],["nequi","Nequi"]].map(([id,label]) => <label key={id} style={{marginRight:16}}><input type="checkbox" checked={banks.includes(id)} onChange={() => toggleBank(id)} disabled={banks.length === 1 && banks.includes(id)}/> {label}</label>)}<p>Elige uno o ambos. Se aplica a las búsquedas manuales y automáticas. Se guarda para tu usuario en este navegador.</p></fieldset>
+        <fieldset disabled={syncing || banksBusy || !isAdmin}><legend>Bancos para sincronizar</legend>{[["bancolombia","Bancolombia"],["nequi","Nequi"]].map(([id,label]) => <label key={id} style={{marginRight:16}}><input type="checkbox" checked={banks.includes(id)} onChange={() => toggleBank(id)} disabled={banks.length === 1 && banks.includes(id)}/> {label}</label>)}<p>Elige uno o ambos. Se aplica a las búsquedas manuales y automáticas. Se guarda en tu workspace y se conserva entre dispositivos.</p></fieldset>{banksError ? <Alert tone="danger">{banksError}</Alert> : null}
       <details className="quick-movement-sync-card manual-sync-group">
         <summary>Sincronización manual</summary>
         <div className="movement-sync-copy">

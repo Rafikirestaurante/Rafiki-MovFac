@@ -11,7 +11,7 @@ describe("Acceso al diagnóstico", () => {
       expect(html).toContain('class="panel-card sync-diagnostic" open=""');
       expect(html).toContain("Diagnóstico avanzado de sincronización");
       expect(html).toContain("Actualizar diagnóstico");
-      expect(html).toContain("1.8.16");
+      expect(html).toContain("1.9.0");
       expect(html.indexOf("Diagnóstico avanzado de sincronización")).toBeGreaterThan(html.indexOf("Sincronización Gmail"));
     });
   }

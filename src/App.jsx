@@ -8,7 +8,7 @@ import SettingsPage from "./pages/SettingsPage.jsx";
 import UserAdminPage from "./pages/UserAdminPage.jsx";
 import { Alert } from "./components/Ui.jsx";
 import { getCurrentProfile, getSession, onAuthStateChange, signOut } from "./services/authService.js";
-import { syncGmailQuick, syncInvoicesRecent } from "./services/gmailIntegrationService.js";
+import { syncGmailQuick, syncInvoicesRecent, isGmailSyncBusy } from "./services/gmailIntegrationService.js";
 
 const pages = {
   inicio: DashboardPage,
@@ -62,7 +62,7 @@ export default function App() {
     let movementRunning = false;
     let invoiceRunning = false;
     const syncMovements = async () => {
-      if (movementRunning || disposed || !navigator.onLine) return;
+      if (movementRunning || disposed || !navigator.onLine || isGmailSyncBusy()) return;
       movementRunning = true;
       setAutoSync((v) => ({ ...v, movements: { ...v.movements, active: true, message: "Sincronizando movimientos..." } }));
       try {
@@ -75,7 +75,7 @@ export default function App() {
       finally { movementRunning = false; }
     };
     const syncInvoices = async () => {
-      if (invoiceRunning || disposed || !navigator.onLine) return;
+      if (invoiceRunning || disposed || !navigator.onLine || isGmailSyncBusy()) return;
       invoiceRunning = true;
       setAutoSync((v) => ({ ...v, invoices: { ...v.invoices, active: true, message: "Sincronizando facturas..." } }));
       try {

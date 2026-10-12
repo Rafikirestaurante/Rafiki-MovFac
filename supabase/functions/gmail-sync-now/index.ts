@@ -1,4 +1,5 @@
-import { selectedBanks, bankQuery } from "../_shared/banks.ts";
+import {workspaceBanks} from "../_shared/workspaceBanks.ts";
+import { bankQuery } from "../_shared/banks.ts";
 import { extractNequiMovement } from "../_shared/nequi.ts";
 import { optionsResponse } from "../_shared/cors.ts";
 import { jsonResponse, errorMessage } from "../_shared/http.ts";
@@ -105,22 +106,21 @@ Deno.serve(async (request: Request) => {
   let actorEmail = "";
   let publicEmployeeAccess = false;
   let publicClientKey = "";
-  let admin: any = null;
+  let context: Awaited<ReturnType<typeof requireAppAdmin>> | null = null;
   try {
     const body = await request.json().catch(() => ({}));
-    const banks = selectedBanks(body.banks);
+
     const requestedQuickHours = Number(body.quick_hours ?? 1);
     const quickHours = [1, 6, 24].includes(requestedQuickHours) ? requestedQuickHours : 1;
     const quickMessageLimit = quickHours === 24 ? 500 : quickHours === 6 ? 120 : 20;
-    const context = await requireAppAdmin(request);
+    context = await requireAppAdmin(request);
+    const banks = await workspaceBanks(context);
     operationClient = context.client;
     actorUserId = context.user.id;
     actorEmail = context.email;
     if (!operationClient) throw new Error("No se pudo establecer el contexto de sincronización.");
     const client = operationClient;
-    const { data: workspace, error: workspaceError } = await client.from("workspaces").select("id").eq("owner_user_id", actorUserId).maybeSingle();
-    if (workspaceError || !workspace) throw new Error("El usuario no tiene un workspace activo para sincronizar.");
-    const workspaceId = workspace.id;
+    const workspaceId = context.workspaceId;
     const now = new Date();
     const requestedMode = String(body.mode || "range").toLowerCase();
     const syncMode = publicEmployeeAccess || requestedMode === "quick" ? "quick" : "range";
@@ -132,32 +132,17 @@ Deno.serve(async (request: Request) => {
     const dateTo = syncMode === "quick" ? isoDay(now.toISOString().slice(0, 10), now) : isoDay(body.date_to, now);
     if (dateFrom > dateTo) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
 
-    const staleLimit = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { data: activeRun, error: activeError } = await client.from("gmail_sync_runs").select("id,started_at").eq("workspace_id", workspaceId).eq("status", "running").gte("started_at", staleLimit).limit(1).maybeSingle();
-    if (activeError) throw new Error(`No se pudo validar sincronizaciones activas: ${activeError.message}`);
-    if (activeRun) return jsonResponse(request, { error: "Ya existe una sincronización en curso. Intenta nuevamente cuando finalice.", active_run_id: activeRun.id }, 409);
-
-    const { data: run, error: runError } = await client.from("gmail_sync_runs").insert({
-      workspace_id: workspaceId,
-      trigger_type: "manual", status: "running", requested_by: actorUserId,
-      detail: {
-        phase: publicEmployeeAccess ? "3A.3-public" : "3A.3",
-        banks,
-      mode: syncMode,
-        quick_hours: syncMode === "quick" ? quickHours : null,
-        start_at: syncMode === "quick" ? quickStart.toISOString() : null,
-        date_from: dateFrom,
-        date_to: dateTo,
-        requested_by_email: actorEmail,
-        public_employee_access: publicEmployeeAccess
-      }
-    }).select("id").single();
-    if (runError) throw new Error(`No se pudo registrar el inicio: ${runError.message}`);
+    const {data: run,error: runError} = await client.rpc("begin_workspace_sync", {
+      p_workspace: workspaceId,p_user: actorUserId,
+      p_detail: {phase:"5F",mode:syncMode,banks,quick_hours:syncMode === "quick" ? quickHours : null,start_at:syncMode === "quick" ? quickStart.toISOString() : null,date_from:dateFrom,date_to:dateTo}
+    });
+    if (runError) throw new Error(`No se pudo iniciar la sincronización: ${runError.message}`);
+    if (run.busy) return jsonResponse(request,{error:"Ya existe una sincronización en curso en tu workspace.",active_run_id:run.id},409);
     syncRunId = Number(run.id);
 
     const { data: connection, error: connectionError } = await client.from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv,status")
-      .eq("owner_user_id", actorUserId).maybeSingle();
+      .eq("workspace_id", context!.workspaceId).eq("owner_user_id", actorUserId).maybeSingle();
     if (connectionError) throw new Error(`No se pudo consultar Gmail: ${connectionError.message}`);
     if (!connection || connection.status === "disconnected" || !connection.refresh_token_ciphertext || !connection.refresh_token_iv) {
       throw new Error("Gmail no tiene una conexión reutilizable. Ejecuta el verificador y, si es necesario, conecta la cuenta nuevamente.");
@@ -316,13 +301,13 @@ Deno.serve(async (request: Request) => {
             }).eq("id", existingMovement.id);
             if (refreshMovementError) throw refreshMovementError;
           } else {
-            const { data: fingerprintMatch, error: fingerprintError } = await client.from("financial_movements")
+            const { data: fingerprintMatch, error: fingerprintError } = extraction.reference_text ? await client.from("financial_movements")
               .select("id,gmail_message_id")
               .eq("workspace_id", workspaceId)
               .eq("raw_fingerprint", fingerprint)
               .neq("gmail_message_id", message.id)
               .limit(1)
-              .maybeSingle();
+              .maybeSingle() : {data:null,error:null};
             if (fingerprintError) throw fingerprintError;
 
             if (fingerprintMatch) {
@@ -372,7 +357,7 @@ Deno.serve(async (request: Request) => {
             processing_status: "error",
             raw_metadata: { ...baseMetadata, source_detected: bank, extraction_result: "error", requires_review: true, registered_at: new Date().toISOString(), extractor_version: extractorVersion, error: errorMessage(extractionError) }
           }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
-          await client.from("processing_errors").insert({
+          await client.from("processing_errors").insert({ workspace_id: context!.workspaceId,
             sync_run_id: syncRunId,
             gmail_message_id: ref.id,
             source: bank,
@@ -383,7 +368,7 @@ Deno.serve(async (request: Request) => {
         }
       } catch (itemError) {
         errors += 1;
-        await client.from("processing_errors").insert({
+        await client.from("processing_errors").insert({ workspace_id: context!.workspaceId,
           sync_run_id: syncRunId,
           gmail_message_id: ref.id,
           source: "gmail",
@@ -420,7 +405,7 @@ Deno.serve(async (request: Request) => {
       finished_at: finishedAt,
       messages_scanned: messagesScanned,
       movements_created: movementsCreated,
-      duplicates_ignored: candidateDuplicates + movementDuplicates,
+      duplicates_ignored: movementDuplicates,
       errors_count: errors,
       detail
     }).eq("id", syncRunId);
@@ -429,8 +414,8 @@ Deno.serve(async (request: Request) => {
       last_verified_at: finishedAt,
       last_sync_at: finishedAt,
       last_error: errors ? `${errors} correo(s) presentaron errores de lectura. Consulta el diagnóstico para ver el detalle.` : null
-    }).eq("owner_user_id", actorUserId);
-    await client.from("gmail_integration_audit").insert({
+    }).eq("workspace_id", context!.workspaceId).eq("owner_user_id", actorUserId);
+    await client.from("gmail_integration_audit").insert({ workspace_id: context!.workspaceId,
       event_type: publicEmployeeAccess ? "employee_public_sync" : "manual_sync",
       user_id: actorUserId,
       user_email: actorEmail,
@@ -455,7 +440,7 @@ Deno.serve(async (request: Request) => {
       movements_created: movementsCreated,
       movement_duplicates: movementDuplicates,
       bancolombia_unidentified: bancolombiaUnidentified,
-      duplicates_ignored: candidateDuplicates + movementDuplicates,
+      duplicates_ignored: movementDuplicates,
       errors_count: errors,
       quick_message_limit: syncMode === "quick" ? quickMessageLimit : null
     });
@@ -470,14 +455,14 @@ Deno.serve(async (request: Request) => {
           detail: { phase: "3A.3", fatal_error: errorMessage(error), extractor_version: "multi-bank-5E-v1" }
         }).eq("id", syncRunId);
         const fatalDetail = errorMessage(error);
-        await client.from("processing_errors").insert({
+        await client.from("processing_errors").insert({ workspace_id: context!.workspaceId,
           sync_run_id: syncRunId,
           source: "gmail",
           stage: "sync",
           error_message: fatalDetail,
           technical_detail: { phase: "3A.3", fatal: true }
         });
-        await client.from("gmail_connections").update({ status: "error", last_error: fatalDetail }).eq("owner_user_id", actorUserId);
+        await client.from("gmail_connections").update({ status: "error", last_error: fatalDetail }).eq("workspace_id", context!.workspaceId).eq("owner_user_id", actorUserId);
       } catch { /* conservar el error original */ }
     }
     return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);

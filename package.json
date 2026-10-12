@@ -1,7 +1,7 @@
 {
   "name": "rafiki-movimientos-facturas",
   "private": true,
-  "version": "1.8.16",
+  "version": "1.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "validate": "node scripts/validate-project.mjs",
-    "check": "npm test && npm run lint && npm run validate && npm run build"
+    "check": "npm test && npm run test:db && npm run lint && npm run validate && npm run build",
+    "test:db": "node scripts/test-workspace-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
@@ -24,8 +25,7 @@
     "eslint": "^9.16.0",
     "globals": "^15.13.0",
     "vite-plugin-pwa": "^0.21.2",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "@electric-sql/pglite": "0.5.9"
   }
 }
-
-

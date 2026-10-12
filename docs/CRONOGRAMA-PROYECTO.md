@@ -107,3 +107,7 @@ Base oficial: proyecto independiente Rafiki MF, completamente separado de Rafiki
 - Alertas por fallos.
 - Centro de errores.
 - Pruebas integrales y versión estable 2.0.0.
+
+## Actualización 12/10/2026 — Fase 5F en curso
+Base 1.8.16. Primera entrega 1.9.0: aislamiento de workspace, preferencias compartidas, inicio atómico de sincronización y preparación OAuth. Ver docs/FASE-5F-1.9.0.md. La cronología antigua anterior se conserva como referencia y no implica cierre técnico de fases. Pendiente validación de staging y Google.
+

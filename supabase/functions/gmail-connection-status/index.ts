@@ -13,11 +13,12 @@ Deno.serve(async (request: Request) => {
       client
         .from("gmail_connections")
         .select("google_email,status,connected_at,last_verified_at,last_sync_at,last_error,disconnected_at,granted_scope")
-        .eq("owner_user_id", admin.user.id)
+        .eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id)
         .maybeSingle(),
       client
         .from("processing_errors")
         .select("id,sync_run_id,source,stage,error_message,created_at")
+        .eq("workspace_id", admin.workspaceId)
         .order("created_at", { ascending: false })
         .limit(5)
     ]);

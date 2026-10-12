@@ -27,6 +27,7 @@ Deno.serve(async (request: Request) => {
     if (error) throw new Error(`No se pudo preparar la autorización: ${error.message}`);
 
     await client.from("gmail_integration_audit").insert({
+      workspace_id: admin.workspaceId,
       event_type: "oauth_started",
       user_id: user.id,
       user_email: email,

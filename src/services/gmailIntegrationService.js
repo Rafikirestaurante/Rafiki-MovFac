@@ -1,5 +1,5 @@
 import { supabase, supabaseConfigured, supabaseUrl } from "../supabaseClient.js";
-import { getSelectedBanks } from "./bankPreferences.js";
+
 
 function edgeEndpoint(name) {
   return supabaseUrl ? `${supabaseUrl.replace(/\/$/, "")}/functions/v1/${name}` : "";
@@ -59,13 +59,13 @@ async function buildFunctionError(name, error, fallback) {
   return wrapped;
 }
 
+let activeSyncRequests = 0;
+export const isGmailSyncBusy = () => activeSyncRequests > 0;
 async function invoke(name, body = {}) {
   if (!supabaseConfigured || !supabase) throw new Error("Supabase todavía no está configurado.");
-  if (["gmail-sync-now", "gmail-diagnostics"].includes(name)) {
-    const { data: session, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    body = {...body,banks:getSelectedBanks(session.session?.user?.id)};
-  }
+  const syncing = ["gmail-sync-now","gmail-sync-invoices"].includes(name);
+  if (syncing) activeSyncRequests += 1;
+  try {
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) throw await buildFunctionError(name, error, `No se pudo ejecutar ${name}.`);
   if (data?.error) {
@@ -80,6 +80,7 @@ async function invoke(name, body = {}) {
     throw wrapped;
   }
   return data || {};
+  } finally { if (syncing) activeSyncRequests -= 1; }
 }
 
 export function edgeErrorDetails(error, fallbackFunctionName = "") {

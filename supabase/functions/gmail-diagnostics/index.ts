@@ -1,3 +1,4 @@
+import {workspaceBanks} from "../_shared/workspaceBanks.ts";
 import { optionsResponse } from "../_shared/cors.ts";
 import { decryptSecret } from "../_shared/crypto.ts";
 import { getGmailProfile, refreshGoogleAccessToken } from "../_shared/google.ts";
@@ -17,7 +18,7 @@ type GmailListResponse = {
   resultSizeEstimate?: number;
 };
 
-import { selectedBanks, bankQuery } from "../_shared/banks.ts";
+import { bankQuery } from "../_shared/banks.ts";
 
 function friendlyError(value: unknown): string {
   const detail = errorMessage(value);
@@ -47,8 +48,9 @@ Deno.serve(async (request: Request) => {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const banks = selectedBanks(body.banks);
+
     const admin = await requireAppAdmin(request);
+    const banks = await workspaceBanks(admin);
     const { client, user, email } = admin;
     const checks: Check[] = [];
     const checkedAt = new Date().toISOString();
@@ -57,11 +59,13 @@ Deno.serve(async (request: Request) => {
       client
         .from("processing_errors")
         .select("id,sync_run_id,gmail_message_id,source,stage,error_message,technical_detail,resolved,created_at")
+        .eq("workspace_id", admin.workspaceId)
         .order("created_at", { ascending: false })
         .limit(8),
       client
         .from("gmail_sync_candidates")
         .select("id,gmail_message_id,internal_date,sender,subject,snippet,processing_status,raw_metadata,last_detected_at")
+        .eq("workspace_id", admin.workspaceId)
         .order("last_detected_at", { ascending: false })
         .limit(40)
     ]);
@@ -80,7 +84,7 @@ Deno.serve(async (request: Request) => {
     const { data: connection, error: connectionError } = await client
       .from("gmail_connections")
       .select("google_email,status,connected_at,last_verified_at,last_sync_at,last_error,granted_scope,refresh_token_ciphertext,refresh_token_iv")
-      .eq("owner_user_id", admin.user.id)
+      .eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id)
       .maybeSingle();
 
     if (connectionError) {
@@ -104,7 +108,7 @@ Deno.serve(async (request: Request) => {
     if (!connection.refresh_token_ciphertext || !connection.refresh_token_iv) {
       const message = "La conexión no contiene una credencial reutilizable. Debes conectar Gmail nuevamente.";
       checks.push({ key: "credentials", label: "Credencial guardada", ok: false, message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
     checks.push({ key: "credentials", label: "Credencial guardada", ok: true, message: "La credencial cifrada está disponible." });
@@ -116,8 +120,8 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "decryption", label: "Descifrado seguro", ok: false, message: "No se pudo descifrar la credencial.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
-      await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "decryption", error: message } });
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
+      await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId, event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "decryption", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
 
@@ -129,8 +133,8 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "token", label: "Autorización de Google", ok: false, message: "Google no pudo renovar el acceso.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
-      await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "token_refresh", error: message } });
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
+      await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId, event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "token_refresh", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
 
@@ -141,8 +145,8 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "profile", label: "Lectura de Gmail", ok: false, message: "No fue posible consultar el buzón.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
-      await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_profile", error: message } });
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
+      await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId, event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_profile", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
 
@@ -157,8 +161,8 @@ Deno.serve(async (request: Request) => {
     } catch (error) {
       const message = friendlyError(error);
       checks.push({ key: "search", label: "Búsqueda de alertas de bancos seleccionados", ok: false, message: "Gmail respondió, pero la búsqueda de mensajes falló.", error: message });
-      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
-      await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_search", error: message } });
+      await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
+      await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId, event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_search", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });
     }
 
@@ -167,9 +171,9 @@ Deno.serve(async (request: Request) => {
       status: "connected",
       last_verified_at: checkedAt,
       last_error: null
-    }).eq("owner_user_id", admin.user.id);
+    }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
 
-    await client.from("gmail_integration_audit").insert({
+    await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId,
       event_type: "diagnostic_ok",
       user_id: user.id,
       user_email: email,

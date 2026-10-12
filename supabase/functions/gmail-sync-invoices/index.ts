@@ -91,11 +91,12 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
   let syncRunId: number | null = null;
+  let operationContext: Awaited<ReturnType<typeof requireAppAdmin>> | null = null;
   try {
     const admin = await requireAppAdmin(request);
+    operationContext = admin;
     const client = admin.client;
-    const { data: workspace, error: workspaceError } = await client.from("workspaces").select("id").eq("owner_user_id", admin.user.id).maybeSingle();
-    if (workspaceError || !workspace) throw new Error("El usuario no tiene un workspace activo para sincronizar.");
+    const workspace = {id:admin.workspaceId};
     const body = await request.json().catch(() => ({}));
     const now = new Date();
     const mode = String(body.mode || "recent") === "range" ? "range" : "recent";
@@ -104,19 +105,12 @@ Deno.serve(async (request: Request) => {
     const dateTo = mode === "recent" ? now.toISOString().slice(0, 10) : isoDay(body.date_to, now);
     if (dateFrom > dateTo) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
 
-    const staleLimit = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { data: activeRun } = await client.from("gmail_sync_runs").select("id").eq("status", "running").gte("started_at", staleLimit).limit(1).maybeSingle();
-    if (activeRun) return jsonResponse(request, { error: "Ya existe una sincronización en curso." }, 409);
-
-    const { data: run, error: runError } = await client.from("gmail_sync_runs").insert({
-      workspace_id: workspace.id,
-      trigger_type: "manual", status: "running", requested_by: admin.user.id,
-      detail: { phase: "2D", mode, date_from: dateFrom, date_to: dateTo, requested_by_email: admin.email }
-    }).select("id").single();
-    if (runError) throw new Error(`No se pudo registrar la sincronización: ${runError.message}`);
+    const {data:run,error:runError} = await client.rpc("begin_workspace_sync",{p_workspace:admin.workspaceId,p_user:admin.user.id,p_detail:{phase:"2D",mode,date_from:dateFrom,date_to:dateTo}});
+    if (runError) throw new Error(`No se pudo iniciar la sincronización: ${runError.message}`);
+    if (run.busy) return jsonResponse(request,{error:"Ya existe una sincronización en curso en tu workspace.",active_run_id:run.id},409);
     syncRunId = Number(run.id);
 
-    const { data: connection, error: connectionError } = await client.from("gmail_connections").select("google_email,refresh_token_ciphertext,refresh_token_iv,status").eq("owner_user_id", admin.user.id).maybeSingle();
+    const { data: connection, error: connectionError } = await client.from("gmail_connections").select("google_email,refresh_token_ciphertext,refresh_token_iv,status").eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id).maybeSingle();
     if (connectionError) throw new Error(connectionError.message);
     if (!connection || connection.status === "disconnected" || !connection.refresh_token_ciphertext || !connection.refresh_token_iv) throw new Error("Gmail no tiene una conexión reutilizable.");
     const refreshToken = await decryptSecret(connection.refresh_token_ciphertext, connection.refresh_token_iv);
@@ -187,16 +181,16 @@ Deno.serve(async (request: Request) => {
           const documentKey = await sha256Hex([message.id, item.attachment.filename, item.sourceEntry || "", parsed.cufe || parsed.supplier_tax_id, parsed.invoice_number || "unknown"].join("|"));
           let existing: { id: string } | null = null;
           if (parsed.cufe) {
-            const { data } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("cufe", parsed.cufe).limit(1).maybeSingle(); existing = data;
+            const { data,error:dedupError } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("cufe", parsed.cufe).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
           }
           if (!existing && parsed.supplier_tax_id && parsed.invoice_number) {
-            const { data } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("supplier_tax_id", parsed.supplier_tax_id).eq("invoice_number", parsed.invoice_number).limit(1).maybeSingle(); existing = data;
+            const { data,error:dedupError } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("supplier_tax_id", parsed.supplier_tax_id).eq("invoice_number", parsed.invoice_number).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
           }
           if (!existing) {
-            const { data } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("document_key", documentKey).limit(1).maybeSingle(); existing = data;
+            const { data,error:dedupError } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("document_key", documentKey).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
           }
           const row = {
-            gmail_message_id: message.id,
+            workspace_id: admin.workspaceId, gmail_message_id: message.id,
             gmail_thread_id: message.threadId || ref.threadId || null,
             attachment_id: item.attachment.attachmentId || null,
             document_type: parsed.document_type,
@@ -223,7 +217,7 @@ Deno.serve(async (request: Request) => {
             source_metadata: { ...parsed.source_metadata, zip_entry: item.sourceEntry || null, extraction_confidence: parsed.extraction_confidence, sync_run_id: syncRunId }
           };
           if (existing) {
-            const { error } = await client.from("electronic_invoices").update(row).eq("id", existing.id);
+            const { error } = await client.from("electronic_invoices").update(row).eq("workspace_id",admin.workspaceId).eq("id", existing.id);
             if (error) throw error;
             invoicesUpdated += 1; duplicates += 1;
           } else {
@@ -234,14 +228,15 @@ Deno.serve(async (request: Request) => {
           if (parsed.document_status === "incomplete") incomplete += 1;
         }
 
-        await client.from("gmail_sync_candidates").upsert({
-          gmail_message_id: message.id, gmail_thread_id: message.threadId || ref.threadId || null, sync_run_id: syncRunId,
+        const {error:candidateError} = await client.from("gmail_sync_candidates").upsert({
+          workspace_id: admin.workspaceId, gmail_message_id: message.id, gmail_thread_id: message.threadId || ref.threadId || null, sync_run_id: syncRunId,
           internal_date: receivedAt, sender: from, recipient: header(message, "To"), subject, snippet: message.snippet || "", labels: message.labelIds || [],
           processing_status: "processed", raw_metadata: { phase_last_seen: "2D", source_detected: "electronic_invoice", attachments_scanned: attachments.length, invoices_detected: extracted.length, extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION }, last_detected_at: new Date().toISOString()
-        }, { onConflict: "gmail_message_id" });
+        }, { onConflict: "workspace_id,gmail_message_id" });
+        if(candidateError) throw candidateError;
       } catch (itemError) {
         errors += 1;
-        await client.from("processing_errors").insert({ sync_run_id: syncRunId, gmail_message_id: ref.id, source: "invoice", stage: "invoice_extraction", error_message: errorMessage(itemError), technical_detail: { phase: "2D", extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION } });
+        await client.from("processing_errors").insert({ workspace_id: admin.workspaceId, sync_run_id: syncRunId, gmail_message_id: ref.id, source: "invoice", stage: "invoice_extraction", error_message: errorMessage(itemError), technical_detail: { phase: "2D", extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION } });
       }
     }
 
@@ -249,13 +244,14 @@ Deno.serve(async (request: Request) => {
     const detail = { phase: "2D", mode, date_from: dateFrom, date_to: dateTo, messages_found: refs.length, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION };
     const finishedAt = new Date().toISOString();
     await client.from("gmail_sync_runs").update({ status, finished_at: finishedAt, messages_scanned: messagesScanned, invoices_created: invoicesCreated, duplicates_ignored: duplicates, errors_count: errors, detail }).eq("id", syncRunId);
-    await client.from("gmail_connections").update({ status: "connected", last_verified_at: finishedAt, last_sync_at: finishedAt, last_error: errors ? `${errors} correo(s) de facturación presentaron errores.` : null }).eq("owner_user_id", admin.user.id);
-    await client.from("gmail_integration_audit").insert({ event_type: "invoice_sync", user_id: admin.user.id, user_email: admin.email, google_email: connection.google_email, detail: { sync_run_id: syncRunId, ...detail, errors } });
+    await client.from("gmail_connections").update({ status: "connected", last_verified_at: finishedAt, last_sync_at: finishedAt, last_error: errors ? `${errors} correo(s) de facturación presentaron errores.` : null }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
+    await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId, event_type: "invoice_sync", user_id: admin.user.id, user_email: admin.email, google_email: connection.google_email, detail: { sync_run_id: syncRunId, ...detail, errors } });
     return jsonResponse(request, { sync_run_id: syncRunId, status, messages_found: refs.length, messages_scanned: messagesScanned, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, errors_count: errors });
   } catch (error) {
     if (syncRunId) {
       try {
-        const admin = await requireAppAdmin(request);
+        const admin = operationContext;
+        if (!admin) throw new Error("Contexto no disponible");
         await admin.client.from("gmail_sync_runs").update({ status: "error", finished_at: new Date().toISOString(), errors_count: 1, detail: { phase: "2D", fatal_error: errorMessage(error) } }).eq("id", syncRunId);
       } catch { /* conservar error original */ }
     }
