@@ -46,7 +46,7 @@ export default function LoginPage() {
           <p className="showcase-copy">Una aplicación independiente para consultar movimientos bancarios y organizar facturas detectadas desde Gmail.</p>
           <div className="showcase-points">
             <div><Icon name="mail" /><span>Lectura autorizada de Gmail</span></div>
-            <div><Icon name="shield" /><span>Datos aislados de Rafiki Pedidos</span></div>
+            <div><Icon name="shield" /><span>Un espacio propio para tu información</span></div>
             <div><Icon name="check" /><span>Consulta rápida de movimientos</span></div>
           </div>
         </div>
@@ -59,7 +59,7 @@ export default function LoginPage() {
           <div className="login-mobile-brand"><span>R</span><div><strong>Rafiki</strong><small>Movimientos y facturas</small></div></div>
           <span className="eyebrow">{mode === "login" ? "Bienvenido" : "Primer acceso"}</span>
           <h2>{mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</h2>
-          <p>{mode === "login" ? "Ingresa con tu correo autorizado para consultar tu información documental." : "La cuenta inicial crea el Administrador. Las cuentas posteriores requieren autorización previa."}</p>
+          <p>{mode === "login" ? "Ingresa con tu correo autorizado para consultar tu información documental." : "Crea tu cuenta con un correo autorizado. Cada usuario trabaja en su propio espacio."}</p>
 
           {!supabaseConfigured ? <Alert tone="warning">Faltan las variables de Supabase. Copia <code>.env.example</code> a <code>.env</code> y completa los datos.</Alert> : null}
           {message ? <Alert tone={tone}>{message}</Alert> : null}
@@ -83,8 +83,13 @@ export default function LoginPage() {
           </form>
 
           <button className="text-button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setMessage(""); }}>
-            {mode === "login" ? "¿Es la primera instalación? Crear cuenta inicial" : "Ya tengo cuenta. Volver al ingreso"}
+            {mode === "login" ? "Crear cuenta" : "Ya tengo cuenta. Volver al ingreso"}
           </button>
+          <nav aria-label="Información pública" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1.5rem" }}>
+            <a href="/presentacion.html">Sobre Rafiki MF</a>
+            <a href="/privacidad.html">Privacidad</a>
+            <a href="mailto:rafiki.restaurante@gmail.com">Soporte</a>
+          </nav>
         </div>
       </section>
     </main>

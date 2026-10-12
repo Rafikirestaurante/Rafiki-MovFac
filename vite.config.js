@@ -11,6 +11,7 @@ export default defineConfig({
       manifest: false,
       workbox: {
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/(?:presentacion|privacidad)\.html$/],
         cleanupOutdatedCaches: true
       }
     })
