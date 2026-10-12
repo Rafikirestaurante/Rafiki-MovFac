@@ -164,9 +164,10 @@ export default function MovementsPage({ profile, syncIndicator }) {
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {syncMessage ? <Alert tone={syncTone}>{syncMessage}</Alert> : null}
 
+      <SyncDiagnostic />
+
       <details className="movement-options">
         <summary>Opciones</summary>
-        <SyncDiagnostic />
       <details className="quick-movement-sync-card manual-sync-group">
         <summary>Sincronización manual</summary>
         <div className="movement-sync-copy">
