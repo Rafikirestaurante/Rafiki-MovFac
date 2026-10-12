@@ -4,7 +4,7 @@ export const BANCOLOMBIA_ALERT_EMAILS = [
   "alertasynotificaciones@ayn.notificacionesbancolombia.com"
 ];
 export const BANCOLOMBIA_SENDER_QUERY = `{${BANCOLOMBIA_ALERT_EMAILS.map(email => `from:${email}`).join(" ")}}`;
-export const BANCOLOMBIA_EXTRACTOR_VERSION = "bancolombia-3A2-v3";
+export const BANCOLOMBIA_EXTRACTOR_VERSION = "bancolombia-5E-v4";
 
 export type BancolombiaMovementType = "income" | "transfer" | "card_purchase";
 
@@ -262,6 +262,7 @@ function classify(text: string): BancolombiaMovementType | null {
   if (/recibiste\s+un\s+pago(?:\s+[a-záéíóúñ0-9_-]+){0,3}\s+de\s+/i.test(text)) return "income";
   if (/compraste\b/i.test(text)) return "card_purchase";
   if (/transferiste\b/i.test(text)) return "transfer";
+  if (/\bpagaste\s+(?:cop\s*)?\$?\s*[\d][\d.,]*\s+por\s+c[oó]digo\s+qr\b/i.test(text)) return "transfer";
   return null;
 }
 
@@ -309,6 +310,14 @@ export function extractBancolombiaMovement(input: {
   }
 
   if (type === "transfer") {
+    const qr = combined.match(/\bpagaste\s+(?:cop\s*)?\$?\s*([\d][\d.,]*)\s+por\s+c[oó]digo\s+qr\s+desde\s+tu\s+cuenta\s+\*+\s*\d+\s+a\s+la\s+llave\s+(\d+)\s+el\s+\d/i);
+    if (qr) {
+      amount = normalizeCopAmount(qr[1]);
+      detail = `Pago QR a la llave ${qr[2]}`;
+      paymentKind = "QR";
+      paymentOrigin = qr[2];
+      exactRule = true;
+    }
     const exact = combined.match(/transferiste\s+(?:de\s+manera\s+exitosa\s+)?(?:por\s+)?(?:cop\s*)?\$?\s*([\d][\d.,]*)[\s\S]{0,180}?desde\s+tu\s+cuenta\s+\*+\d+\s+a\s+(.+?)(?:\s+el\s+\d|\s+fecha\s*:|[.!]|$)/i);
     if (exact) {
       amount = normalizeCopAmount(exact[1]);

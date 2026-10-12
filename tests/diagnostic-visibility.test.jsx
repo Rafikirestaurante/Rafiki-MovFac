@@ -11,7 +11,7 @@ describe("Acceso al diagnóstico", () => {
       expect(html).toContain('class="panel-card sync-diagnostic" open=""');
       expect(html).toContain("Diagnóstico avanzado de sincronización");
       expect(html).toContain("Actualizar diagnóstico");
-      expect(html).toContain("1.8.13");
+      expect(html).toContain("1.8.14");
     });
   }
   it("Movimientos conserva el acceso fuera de Opciones", () => {

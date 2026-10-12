@@ -11,6 +11,15 @@ import {
 } from "../supabase/functions/_shared/bancolombia.ts";
 
 describe("Bancolombia parser", () => {
+  it.each(["codigo", "código"])("extrae pago QR con %s como salida", (word) => {
+    expect(extractBancolombiaMovement({
+      text: `Bancolombia: ARACELY MARIA VILLEGAS INSIGNARES pagaste $160,000.00 por ${word} QR desde tu cuenta *3190 a la llave 0090375843 el 11/10/2026 a las 12:16. Con codigo QR es facil y de una. Dudas al 018000912345.`,
+      receivedAt: "2026-10-11T17:16:00Z"
+    })).toMatchObject({movement_type:"transfer", amount_cop:160000, detail:"Pago QR a la llave 0090375843", transaction_date:"2026-10-11", transaction_at:"2026-10-11T17:16:00.000Z", extraction_confidence:"high", source_metadata:{payment_kind:"QR", account_hint:"*3190"}});
+  });
+  it("no convierte consejos de QR en movimientos", () => {
+    expect(extractBancolombiaMovement({text:"Para pagar con codigo QR verifica la llave de la persona.",receivedAt:"2026-10-11T17:16:00Z"})).toBeNull();
+  });
   it("busca ambos remitentes con una sola consulta OR", () => {
     expect(BANCOLOMBIA_SENDER_QUERY).toBe("{from:alertasynotificaciones@an.notificacionesbancolombia.com from:alertasynotificaciones@ayn.notificacionesbancolombia.com}");
   });
