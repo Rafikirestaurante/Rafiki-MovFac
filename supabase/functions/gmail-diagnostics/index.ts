@@ -17,7 +17,7 @@ type GmailListResponse = {
   resultSizeEstimate?: number;
 };
 
-import { BANCOLOMBIA_SENDER_QUERY } from "../_shared/bancolombia.ts";
+import { selectedBanks, bankQuery } from "../_shared/banks.ts";
 
 function friendlyError(value: unknown): string {
   const detail = errorMessage(value);
@@ -30,8 +30,8 @@ function friendlyError(value: unknown): string {
   return detail;
 }
 
-async function gmailSearch(accessToken: string): Promise<GmailListResponse> {
-  const query = encodeURIComponent(`${BANCOLOMBIA_SENDER_QUERY} newer_than:30d`);
+async function gmailSearch(accessToken: string, banks: string[]): Promise<GmailListResponse> {
+  const query = encodeURIComponent(`${bankQuery(banks)} newer_than:30d`);
   const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=1`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
@@ -46,6 +46,8 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
   try {
+    const body = await request.json().catch(() => ({}));
+    const banks = selectedBanks(body.banks);
     const admin = await requireAppAdmin(request);
     const { client, user, email } = admin;
     const checks: Check[] = [];
@@ -64,7 +66,7 @@ Deno.serve(async (request: Request) => {
         .limit(40)
     ]);
     const unrecognizedAlerts = (recentCandidates || [])
-      .filter((item) => item.raw_metadata?.source_detected === "bancolombia" && item.raw_metadata?.extraction_result === "unsupported_notification")
+      .filter((item) => banks.includes(item.raw_metadata?.source_detected) && item.raw_metadata?.extraction_result === "unsupported_notification")
       .slice(0, 8)
       .map((item) => ({
         id: item.id,
@@ -145,16 +147,16 @@ Deno.serve(async (request: Request) => {
     }
 
     try {
-      const search = await gmailSearch(accessToken);
+      const search = await gmailSearch(accessToken, banks);
       checks.push({
         key: "search",
-        label: "Búsqueda de alertas Bancolombia",
+        label: "Búsqueda de alertas de bancos seleccionados",
         ok: true,
         message: search.messages?.length ? "La búsqueda funciona y encontró al menos una alerta reciente." : "La búsqueda funciona, aunque no encontró alertas en los últimos 30 días."
       });
     } catch (error) {
       const message = friendlyError(error);
-      checks.push({ key: "search", label: "Búsqueda de alertas Bancolombia", ok: false, message: "Gmail respondió, pero la búsqueda de mensajes falló.", error: message });
+      checks.push({ key: "search", label: "Búsqueda de alertas de bancos seleccionados", ok: false, message: "Gmail respondió, pero la búsqueda de mensajes falló.", error: message });
       await client.from("gmail_connections").update({ status: "error", last_error: message }).eq("owner_user_id", admin.user.id);
       await client.from("gmail_integration_audit").insert({ event_type: "diagnostic_error", user_id: user.id, user_email: email, google_email: connection.google_email, detail: { stage: "gmail_search", error: message } });
       return jsonResponse(request, { ok: false, checked_at: checkedAt, google_email: connection.google_email, checks, recent_errors: recentErrors || [], unrecognized_alerts: unrecognizedAlerts, summary_error: message });

@@ -204,11 +204,11 @@ export default function DashboardPage({ onNavigate }) {
 
           {selectedAlerts.length ? (
             <section className="day-detail-section unrecognized-section">
-              <div className="day-detail-heading"><strong>Alertas Bancolombia no reconocidas</strong><Badge tone="warning">Revisar</Badge></div>
+              <div className="day-detail-heading"><strong>Alertas bancarias no reconocidas</strong><Badge tone="warning">Revisar</Badge></div>
               <p className="day-detail-note">El correo quedó registrado, pero no se creó ningún movimiento porque su formato no coincide con una regla conocida.</p>
               <div className="day-detail-list">{selectedAlerts.slice(0, 5).map((row) => (
                 <div key={row.id} className="day-detail-row alert-row">
-                  <div><strong>{row.subject || "Alerta Bancolombia sin asunto"}</strong><small>{formatTime(row.internal_date)} · {row.snippet || row.raw_metadata?.error || "Formato no reconocido"}</small></div>
+                  <div><strong>{row.subject || "Alerta bancaria sin asunto"}</strong><small>{formatTime(row.internal_date)} · {row.snippet || row.raw_metadata?.error || "Formato no reconocido"}</small></div>
                   <Badge tone="warning">Guardada</Badge>
                 </div>
               ))}</div>

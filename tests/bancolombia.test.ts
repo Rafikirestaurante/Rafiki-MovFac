@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BANCOLOMBIA_SENDER_QUERY,
+  isBancolombiaNotification,
   extractBancolombiaMovement,
   extractTransactionDate,
   extractTransactionDateTime,
@@ -21,7 +22,15 @@ describe("Bancolombia parser", () => {
     expect(extractBancolombiaMovement({text:"Para pagar con codigo QR verifica la llave de la persona.",receivedAt:"2026-10-11T17:16:00Z"})).toBeNull();
   });
   it("busca ambos remitentes con una sola consulta OR", () => {
-    expect(BANCOLOMBIA_SENDER_QUERY).toBe("{from:alertasynotificaciones@an.notificacionesbancolombia.com from:alertasynotificaciones@ayn.notificacionesbancolombia.com}");
+    expect(BANCOLOMBIA_SENDER_QUERY).toBe('{from:alertasynotificaciones@an.notificacionesbancolombia.com from:alertasynotificaciones@ayn.notificacionesbancolombia.com (from:notificacionesbancolombia.com subject:"Alertas y Notificaciones")}');
+  });
+  it("detecta nuevos remitentes del dominio para revisión sin aceptarlos como conocidos", () => {
+    const sender = "Alertas <nuevo@futuro.notificacionesbancolombia.com>";
+    expect(isBancolombiaNotification(sender, "Alertas y Notificaciones")).toBe(true);
+    expect(isBancolombiaSender(sender)).toBe(false);
+    expect(isBancolombiaNotification("nuevo@notificacionesbancolombia.com", "Alertas y Notificaciones")).toBe(true);
+    expect(isBancolombiaNotification("nuevo@notificacionesbancolombia.com.ejemplo.com", "Alertas y Notificaciones")).toBe(false);
+    expect(isBancolombiaNotification(sender, "Publicidad")).toBe(false);
   });
   it("acepta el nuevo remitente y rechaza dominios parecidos", () => {
     expect(isBancolombiaSender("Bancolombia <ALERTASYNOTIFICACIONES@AYN.NOTIFICACIONESBANCOLOMBIA.COM>")).toBe(true);

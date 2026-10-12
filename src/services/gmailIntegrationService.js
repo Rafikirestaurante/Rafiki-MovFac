@@ -1,4 +1,5 @@
 import { supabase, supabaseConfigured, supabaseUrl } from "../supabaseClient.js";
+import { getSelectedBanks } from "./bankPreferences.js";
 
 function edgeEndpoint(name) {
   return supabaseUrl ? `${supabaseUrl.replace(/\/$/, "")}/functions/v1/${name}` : "";
@@ -60,6 +61,11 @@ async function buildFunctionError(name, error, fallback) {
 
 async function invoke(name, body = {}) {
   if (!supabaseConfigured || !supabase) throw new Error("Supabase todavía no está configurado.");
+  if (["gmail-sync-now", "gmail-diagnostics"].includes(name)) {
+    const { data: session, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    body = {...body,banks:getSelectedBanks(session.session?.user?.id)};
+  }
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) throw await buildFunctionError(name, error, `No se pudo ejecutar ${name}.`);
   if (data?.error) {

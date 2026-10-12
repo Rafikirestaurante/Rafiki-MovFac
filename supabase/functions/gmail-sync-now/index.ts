@@ -1,3 +1,5 @@
+import { selectedBanks, bankQuery } from "../_shared/banks.ts";
+import { extractNequiMovement } from "../_shared/nequi.ts";
 import { optionsResponse } from "../_shared/cors.ts";
 import { jsonResponse, errorMessage } from "../_shared/http.ts";
 import { decryptSecret } from "../_shared/crypto.ts";
@@ -6,11 +8,12 @@ import { adminClient, requireAppAdmin } from "../_shared/supabase.ts";
 
 import {
   BANCOLOMBIA_EXTRACTOR_VERSION,
-  BANCOLOMBIA_SENDER_QUERY,
+
   extractBancolombiaMovement,
   flattenText,
   htmlToText,
   isBancolombiaSender,
+  isBancolombiaNotification,
   senderEmail
 } from "../_shared/bancolombia.ts";
 
@@ -105,6 +108,7 @@ Deno.serve(async (request: Request) => {
   let admin: any = null;
   try {
     const body = await request.json().catch(() => ({}));
+    const banks = selectedBanks(body.banks);
     const requestedQuickHours = Number(body.quick_hours ?? 1);
     const quickHours = [1, 6, 24].includes(requestedQuickHours) ? requestedQuickHours : 1;
     const quickMessageLimit = quickHours === 24 ? 500 : quickHours === 6 ? 120 : 20;
@@ -138,7 +142,8 @@ Deno.serve(async (request: Request) => {
       trigger_type: "manual", status: "running", requested_by: actorUserId,
       detail: {
         phase: publicEmployeeAccess ? "3A.3-public" : "3A.3",
-        mode: syncMode,
+        banks,
+      mode: syncMode,
         quick_hours: syncMode === "quick" ? quickHours : null,
         start_at: syncMode === "quick" ? quickStart.toISOString() : null,
         date_from: dateFrom,
@@ -164,10 +169,10 @@ Deno.serve(async (request: Request) => {
     const endExclusive = new Date(`${dateTo}T00:00:00-05:00`);
     endExclusive.setDate(endExclusive.getDate() + 1);
     const before = endExclusive.toISOString().slice(0, 10).replaceAll("-", "/");
-    const senderFilter = BANCOLOMBIA_SENDER_QUERY;
+    const senderFilter = bankQuery(banks);
     const queryText = syncMode === "quick"
       ? `${senderFilter} after:${Math.floor(quickStart.getTime() / 1000)}`
-      : `after:${after} before:${before}`;
+      : `${senderFilter} after:${after} before:${before}`;
     const query = encodeURIComponent(queryText);
     const messageLimit = syncMode === "quick" ? quickMessageLimit : 500;
 
@@ -203,6 +208,10 @@ Deno.serve(async (request: Request) => {
         if (syncMode === "quick" && receivedAt && new Date(receivedAt).getTime() < quickStart.getTime()) continue;
         messagesScanned += 1;
         const fromHeader = header(message, "From");
+        const bank = senderEmail(fromHeader) === "notificaciones@nequi.com.co" ? "nequi" : isBancolombiaNotification(fromHeader,header(message,"Subject")) ? "bancolombia" : null;
+        if (!bank || !banks.includes(bank)) continue;
+        const extract = bank === "nequi" ? extractNequiMovement : extractBancolombiaMovement;
+        const extractorVersion = bank === "nequi" ? "nequi-5E-v1" : BANCOLOMBIA_EXTRACTOR_VERSION;
         const baseMetadata = {
           date_header: header(message, "Date"),
           sender_email: senderEmail(fromHeader),
@@ -233,7 +242,7 @@ Deno.serve(async (request: Request) => {
         if (saveCandidateError) throw saveCandidateError;
         if (existingCandidate) candidateDuplicates += 1; else candidatesCreated += 1;
 
-        if (!isBancolombiaSender(fromHeader)) continue;
+
         bancolombiaEmails += 1;
 
         try {
@@ -242,12 +251,12 @@ Deno.serve(async (request: Request) => {
             token.access_token
           );
           const content = await extractMessageText(fullMessage, token.access_token);
-          const extraction = extractBancolombiaMovement({
+          const extraction = (bank === "nequi" || isBancolombiaSender(fromHeader)) ? extract({
             subject: header(fullMessage, "Subject") || header(message, "Subject"),
             text: content.text,
             snippet: fullMessage.snippet || message.snippet || "",
             receivedAt: receivedAt || new Date()
-          });
+          }) : null;
 
           if (!extraction) {
             bancolombiaUnidentified += 1;
@@ -255,21 +264,21 @@ Deno.serve(async (request: Request) => {
               processing_status: "ignored",
               raw_metadata: {
                 ...baseMetadata,
-                source_detected: "bancolombia",
+                source_detected: bank,
                 extraction_result: "unsupported_notification",
                 requires_review: true,
                 unrecognized_reason: "No coincide con una regla de movimiento soportada.",
                 notification_text: content.text || fullMessage.snippet || message.snippet || "",
                 notification_snippet: fullMessage.snippet || message.snippet || "",
                 registered_at: new Date().toISOString(),
-                extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION
+                extractor_version: extractorVersion
               }
             }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
             continue;
           }
 
           const fingerprintSource = [
-            "bancolombia",
+            bank,
             extraction.movement_type,
             extraction.transaction_date,
             extraction.amount_cop,
@@ -296,7 +305,7 @@ Deno.serve(async (request: Request) => {
               detail: extraction.detail,
               amount_cop: extraction.amount_cop,
               extraction_confidence: extraction.extraction_confidence,
-              extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION,
+              extractor_version: extractorVersion,
               reference_text: extraction.reference_text,
               source_metadata: {
                 ...(existingMovement.source_metadata || {}),
@@ -324,7 +333,7 @@ Deno.serve(async (request: Request) => {
                 workspace_id: workspaceId,
                 gmail_message_id: message.id,
                 gmail_thread_id: fullMessage.threadId || message.threadId || ref.threadId || null,
-                source: "bancolombia",
+                source: bank,
                 movement_type: extraction.movement_type,
                 transaction_date: extraction.transaction_date,
                 transaction_at: extraction.transaction_at,
@@ -334,7 +343,7 @@ Deno.serve(async (request: Request) => {
                 sender_email: senderEmail(fromHeader),
                 email_subject: header(fullMessage, "Subject") || header(message, "Subject"),
                 extraction_confidence: extraction.extraction_confidence,
-                extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION,
+                extractor_version: extractorVersion,
                 raw_fingerprint: fingerprint,
                 reference_text: extraction.reference_text,
                 source_metadata: {
@@ -351,25 +360,25 @@ Deno.serve(async (request: Request) => {
             processing_status: "processed",
             raw_metadata: {
               ...baseMetadata,
-              source_detected: "bancolombia",
+              source_detected: bank,
               extraction_result: movementResult,
               movement_type: extraction.movement_type,
-              extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION
+              extractor_version: extractorVersion
             }
           }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
         } catch (extractionError) {
           errors += 1;
           await client.from("gmail_sync_candidates").update({
             processing_status: "error",
-            raw_metadata: { ...baseMetadata, source_detected: "bancolombia", extraction_result: "error", requires_review: true, registered_at: new Date().toISOString(), extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION, error: errorMessage(extractionError) }
+            raw_metadata: { ...baseMetadata, source_detected: bank, extraction_result: "error", requires_review: true, registered_at: new Date().toISOString(), extractor_version: extractorVersion, error: errorMessage(extractionError) }
           }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
           await client.from("processing_errors").insert({
             sync_run_id: syncRunId,
             gmail_message_id: ref.id,
-            source: "bancolombia",
+            source: bank,
             stage: "movement_extraction",
             error_message: errorMessage(extractionError),
-            technical_detail: { phase: "3A.3", extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION }
+            technical_detail: { phase: "3A.3", extractor_version: "multi-bank-5E-v1" }
           });
         }
       } catch (itemError) {
@@ -389,6 +398,7 @@ Deno.serve(async (request: Request) => {
     const finishedAt = new Date().toISOString();
     const detail = {
       phase: publicEmployeeAccess ? "3A.3-public" : "3A.3",
+      banks,
       mode: syncMode,
       quick_hours: syncMode === "quick" ? quickHours : null,
       start_at: syncMode === "quick" ? quickStart.toISOString() : null,
@@ -401,7 +411,7 @@ Deno.serve(async (request: Request) => {
       movements_created: movementsCreated,
       movement_duplicates: movementDuplicates,
       bancolombia_unidentified: bancolombiaUnidentified,
-      extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION,
+      extractor_version: "multi-bank-5E-v1",
       limited_to: messageLimit,
       quick_message_limit: syncMode === "quick" ? quickMessageLimit : null
     };
@@ -431,6 +441,7 @@ Deno.serve(async (request: Request) => {
     return jsonResponse(request, {
       sync_run_id: syncRunId,
       status,
+      banks,
       mode: syncMode,
       quick_hours: syncMode === "quick" ? quickHours : null,
       start_at: syncMode === "quick" ? quickStart.toISOString() : null,
@@ -456,7 +467,7 @@ Deno.serve(async (request: Request) => {
           status: "error",
           finished_at: new Date().toISOString(),
           errors_count: 1,
-          detail: { phase: "3A.3", fatal_error: errorMessage(error), extractor_version: BANCOLOMBIA_EXTRACTOR_VERSION }
+          detail: { phase: "3A.3", fatal_error: errorMessage(error), extractor_version: "multi-bank-5E-v1" }
         }).eq("id", syncRunId);
         const fatalDetail = errorMessage(error);
         await client.from("processing_errors").insert({

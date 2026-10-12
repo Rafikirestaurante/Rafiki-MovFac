@@ -212,7 +212,7 @@ export default function SettingsPage({ profile }) {
     try {
       const data = await syncGmailQuick();
       setTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setMessage(`Búsqueda rápida completada: ${data.messages_scanned || data.messages_found || 0} de hasta 20 alertas de Bancolombia revisadas durante la última hora, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
+      setMessage(`Búsqueda rápida completada: ${data.messages_scanned || data.messages_found || 0} de hasta 20 alertas de los bancos seleccionados revisadas durante la última hora, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
       await load();
     } catch (error) {
       setTone("danger");
@@ -228,7 +228,7 @@ export default function SettingsPage({ profile }) {
     try {
       const data = await syncGmailNow(dateFrom, dateTo);
       setTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setMessage(`Sincronización terminada: ${data.messages_found || 0} correos revisados, ${data.bancolombia_emails || 0} de Bancolombia y ${data.movements_created || 0} movimientos nuevos.`);
+      setMessage(`Sincronización terminada: ${data.messages_found || 0} correos revisados, ${data.bancolombia_emails || 0} de los bancos seleccionados y ${data.movements_created || 0} movimientos nuevos.`);
       await load();
     } catch (error) {
       setTone("danger");
@@ -288,7 +288,7 @@ export default function SettingsPage({ profile }) {
     <>
       <PageHeader eyebrow="Administración" title="Configuración" description="Conexiones, seguridad y estado técnico de la aplicación." />
 
-      <SyncDiagnostic />
+
 
       {!isAdmin ? <Alert tone="warning">Solo un Administrador puede configurar la conexión con Gmail.</Alert> : null}
       {message ? <Alert tone={tone}>{message}</Alert> : null}
@@ -403,7 +403,7 @@ export default function SettingsPage({ profile }) {
             {lastSync ? (lastSync.status === "success" ? "Completada" : lastSync.status === "partial" ? "Con novedades" : lastSync.status === "running" ? "En curso" : "Fallida") : "Sin ejecuciones"}
           </Badge>
         </div>
-        <p className="panel-description">Desde aquí se sincronizan movimientos de Bancolombia. La búsqueda y extracción de facturas se realiza desde el módulo Facturas.</p>
+        <p className="panel-description">Desde aquí se sincronizan movimientos de los bancos seleccionados. La búsqueda y extracción de facturas se realiza desde el módulo Facturas.</p>
         <div className="quick-sync-panel">
           <div><span className="eyebrow">Recomendado</span><strong>Búsqueda rápida</strong><small>Revisa como máximo las 20 alertas más recientes de Bancolombia recibidas durante la última hora.</small></div>
           <button className="primary-button" onClick={synchronizeQuick} disabled={!isAdmin || !canAttemptGmail || Boolean(action)}><Icon name="refresh" size={18} /> {action === "quick-sync" ? "Buscando..." : "Búsqueda rápida"}</button>
@@ -429,6 +429,8 @@ export default function SettingsPage({ profile }) {
         </div> : null}
         {statusUnavailable ? <Alert tone="danger">La sincronización está bloqueada porque no se pudo comprobar la comunicación con las Edge Functions. Ejecuta “Diagnosticar comunicación”.</Alert> : !canAttemptGmail ? <Alert tone="warning">Conecta Gmail antes de ejecutar una sincronización.</Alert> : null}
       </section>
+
+      <SyncDiagnostic />
 
       {confirmDisconnect ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setConfirmDisconnect(false)}>

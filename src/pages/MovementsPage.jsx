@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Icon from "../components/Icons.jsx";
+import { getSelectedBanks, saveSelectedBanks } from "../services/bankPreferences.js";
 import { Alert, EmptyState, PageHeader } from "../components/Ui.jsx";
 import { syncGmailNow, syncGmailQuick } from "../services/gmailIntegrationService.js";
 import { getFinancialMovements } from "../services/movementService.js";
-import SyncDiagnostic from "../components/SyncDiagnostic.jsx";
+
 
 const typeLabels = {
   income: "Ingreso",
@@ -65,6 +66,13 @@ function MovementAmount({ row }) {
 }
 
 export default function MovementsPage({ profile, syncIndicator }) {
+  const [banks,setBanks] = useState(() => getSelectedBanks(profile?.id));
+  function toggleBank(bank) {
+    const next = banks.includes(bank) ? banks.filter(item => item !== bank) : [...banks,bank];
+    if (!next.length) return;
+    saveSelectedBanks(profile?.id,next);
+    setBanks(next);
+  }
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -108,7 +116,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
       const usedHours = Number(data.quick_hours || hours);
       const limit = Number(data.quick_message_limit || (usedHours === 6 ? 120 : usedHours === 3 ? 60 : 20));
       setSyncTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setSyncMessage(`Búsqueda de ${usedHours} ${usedHours === 1 ? "hora" : "horas"} completada: ${data.messages_scanned || data.messages_found || 0} de hasta ${limit} alertas de Bancolombia revisadas, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
+      setSyncMessage(`Búsqueda de ${usedHours} ${usedHours === 1 ? "hora" : "horas"} completada: ${data.messages_scanned || data.messages_found || 0} de hasta ${limit} alertas de los bancos seleccionados revisadas, ${data.movements_created || 0} movimientos nuevos, ${data.duplicates_ignored || 0} ya registrados y ${data.bancolombia_unidentified || 0} con formato no reconocido.`);
       await load();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (syncError) {
@@ -126,7 +134,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
     try {
       const data = await syncGmailNow(dateFrom, dateTo);
       setSyncTone(data.errors_count || data.bancolombia_unidentified ? "warning" : "success");
-      setSyncMessage(`Sincronización terminada: ${data.messages_found || 0} correos consultados, ${data.bancolombia_emails || 0} de Bancolombia y ${data.movements_created || 0} movimientos nuevos.`);
+      setSyncMessage(`Sincronización terminada: ${data.messages_found || 0} correos consultados, ${data.bancolombia_emails || 0} de los bancos seleccionados y ${data.movements_created || 0} movimientos nuevos.`);
       await load();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (syncError) {
@@ -150,12 +158,11 @@ export default function MovementsPage({ profile, syncIndicator }) {
   }, [rows, search, date, source]);
 
   const latestMovement = rows[0] || null;
-  const latestMoment = latestMovement ? formatMoment(latestMovement) : null;
 
   return (
     <>
       <PageHeader
-        eyebrow="Bancolombia y Nequi"
+        eyebrow="Bancos seleccionados"
         title="Movimientos"
         description="Consulta los movimientos detectados en Gmail. El registro más reciente siempre aparece primero."
         action={<button className="secondary-button" onClick={load} disabled={loading || syncing}><Icon name="refresh" size={18} /> Actualizar</button>}
@@ -164,16 +171,17 @@ export default function MovementsPage({ profile, syncIndicator }) {
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {syncMessage ? <Alert tone={syncTone}>{syncMessage}</Alert> : null}
 
-      <SyncDiagnostic />
+
 
       <details className="movement-options">
         <summary>Opciones</summary>
+        <fieldset disabled={syncing}><legend>Bancos para sincronizar</legend>{[["bancolombia","Bancolombia"],["nequi","Nequi"]].map(([id,label]) => <label key={id} style={{marginRight:16}}><input type="checkbox" checked={banks.includes(id)} onChange={() => toggleBank(id)} disabled={banks.length === 1 && banks.includes(id)}/> {label}</label>)}<p>Elige uno o ambos. Se aplica a las búsquedas manuales y automáticas. Se guarda para tu usuario en este navegador.</p></fieldset>
       <details className="quick-movement-sync-card manual-sync-group">
         <summary>Sincronización manual</summary>
         <div className="movement-sync-copy">
-          <span className="eyebrow">Bancolombia</span>
+          <span className="eyebrow">Bancos seleccionados</span>
           <strong>Búsqueda por horas</strong>
-          <small>Busca exclusivamente alertas de Bancolombia recibidas durante la última 1, 6 o 24 horas exactas desde el momento del clic.</small>
+          <small>Busca exclusivamente alertas de los bancos seleccionados recibidas durante la última 1, 6 o 24 horas exactas desde el momento del clic.</small>
         </div>
         <div className="quick-sync-actions" aria-label="Ventana de búsqueda Bancolombia">
           <button className="primary-button" onClick={() => synchronizeQuick(1)} disabled={!isAdmin || syncing || loading}>
@@ -201,16 +209,6 @@ export default function MovementsPage({ profile, syncIndicator }) {
       </details>
       {!isAdmin ? <Alert tone="warning">Solo el Administrador puede iniciar la sincronización. Los Revisores sí pueden consultar los movimientos.</Alert> : null}
 
-      {latestMovement ? (
-        <section className="latest-movement-card" aria-label="Último movimiento registrado">
-          <div className="latest-movement-title">
-            <div className="latest-icon"><Icon name="movements" size={22} /></div>
-            <div><span className="eyebrow">Último movimiento</span><strong>{latestMovement.detail || "Sin detalle"}</strong><small>{typeLabels[latestMovement.movement_type] || latestMovement.movement_type} · {latestMovement.source === "bancolombia" ? "Bancolombia" : "Nequi"}</small></div>
-          </div>
-          <div className="latest-movement-date"><span>Fecha y hora</span><strong>{latestMoment.date}</strong><small>{latestMoment.time}</small></div>
-          <MovementAmount row={latestMovement} />
-        </section>
-      ) : null}
 
       <section className="panel-card">
         <details className="movement-filter-options"><summary>Búsqueda y filtros</summary><div className="filter-bar movement-filters">
@@ -221,7 +219,7 @@ export default function MovementsPage({ profile, syncIndicator }) {
         </div></details>
 
         {loading ? <div className="table-loading">Consultando movimientos...</div> : filtered.length === 0 ? (
-          <EmptyState icon="movements" title={rows.length ? "No hay coincidencias" : "No hay movimientos documentados"} description={rows.length ? "Cambia o limpia los filtros para volver a ver los registros." : "Usa el botón Sincronizar ahora para consultar las alertas de Bancolombia."} />
+          <EmptyState icon="movements" title={rows.length ? "No hay coincidencias" : "No hay movimientos documentados"} description={rows.length ? "Cambia o limpia los filtros para volver a ver los registros." : "Usa el botón Sincronizar ahora para consultar las alertas de los bancos seleccionados."} />
         ) : (
           <>
             <div className="results-caption">{filtered.length} movimiento{filtered.length === 1 ? "" : "s"} · ordenados del más reciente al más antiguo</div>

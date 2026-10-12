@@ -7,7 +7,7 @@ function ensureSupabase() {
 
 function isUnrecognizedBancolombia(row) {
   const metadata = row?.raw_metadata || {};
-  return metadata.source_detected === "bancolombia" && (
+  return ["bancolombia", "nequi"].includes(metadata.source_detected) && (
     metadata.requires_review === true ||
     metadata.extraction_result === "unsupported_notification" ||
     metadata.extraction_result === "error"

@@ -11,11 +11,13 @@ describe("Acceso al diagnóstico", () => {
       expect(html).toContain('class="panel-card sync-diagnostic" open=""');
       expect(html).toContain("Diagnóstico avanzado de sincronización");
       expect(html).toContain("Actualizar diagnóstico");
-      expect(html).toContain("1.8.14");
+      expect(html).toContain("1.8.16");
+      expect(html.indexOf("Diagnóstico avanzado de sincronización")).toBeGreaterThan(html.indexOf("Sincronización Gmail"));
     });
   }
-  it("Movimientos conserva el acceso fuera de Opciones", () => {
+  it("Movimientos no muestra diagnóstico ni recuadro redundante", () => {
     const html = renderToStaticMarkup(<MovementsPage profile={{role:"workspace_owner"}} />);
-    expect(html.indexOf("Diagnóstico avanzado de sincronización")).toBeLessThan(html.indexOf('class="movement-options"'));
+    expect(html).not.toContain("Diagnóstico avanzado de sincronización");
+    expect(html).not.toContain("latest-movement-card");
   });
 });
