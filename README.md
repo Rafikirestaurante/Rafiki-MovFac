@@ -1,19 +1,24 @@
-# Rafiki MF — 1.10.0
+# Rafiki MF — 1.11.0 · Fase 6
 
-Fases 5G (sincronización por lotes y recuperación) y 5I (consultas y reportes de movimientos).
-Base: 1.9.0. La fase 5H no se incorpora.
+Preparación para producción sobre 1.10.0. No incorpora 5H ni 5J.
 
-Lee primero [la guía de entrega](docs/FASES-5G-5I-1.10.0.md).
+Lee primero [la guía de Fase 6](docs/FASE-6-1.11.0.md).
 
-Orden de instalación:
-1. Confirmar la migración 5F aplicada al Supabase correcto.
-2. Ejecutar supabase/2026-10-12-fase5g-batches.sql.
-3. Ejecutar supabase/2026-10-12-fase5i-reports.sql.
-4. Desplegar Edge Functions y frontend.
-5. Verificar versión 1.10.0 en Configuración y realizar la prueba de aceptación.
+## Instalación
 
-No se han aplicado cambios en producción desde esta entrega. La prueba real de aislamiento con una segunda cuenta y su conexión Gmail sigue pendiente.
+1. Confirmar respaldo y configuración APP_PUBLIC_URL/APP_ALLOWED_ORIGINS.
+2. Ejecutar supabase/2026-10-12-fase6-readiness.sql en el Supabase de Rafiki MF.
+3. Subir código y package-lock.json, desplegar todas las Edge Functions y web con Node 24.
+4. Configuración → Preparación para producción → Comprobar instalación.
+5. Completar pruebas reales de Gmail, dos cuentas y restauración antes de declarar el cierre de Fase 6.
 
-Desarrollo local: npm install; npm run check.
+No se ha cambiado producción ni la configuración de Google desde este trabajo.
 
-Incluye pruebas de reglas bancarias, recuperación, reportes, aislamiento y migraciones con PostgreSQL local. Los documentos de fases anteriores se conservan como referencia histórica.
+## Desarrollo
+
+npm ci
+npm run check
+
+Las comprobaciones incluyen PostgreSQL local, pruebas de aplicación, lint, revisión de versiones y compilación. El ZIP excluye dependencias, archivos privados y dist.
+
+Los documentos anteriores se conservan como referencia histórica; no ejecutar todas sus migraciones indiscriminadamente.

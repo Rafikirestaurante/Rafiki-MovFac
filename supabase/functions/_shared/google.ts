@@ -46,6 +46,7 @@ export async function exchangeAuthorizationCode(code: string): Promise<GoogleTok
   return (await parseGoogleResponse(await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    signal:AbortSignal.timeout(15000),
     body
   }))) as GoogleTokenResponse;
 }
@@ -60,19 +61,20 @@ export async function refreshGoogleAccessToken(refreshToken: string): Promise<Go
   return (await parseGoogleResponse(await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    signal:AbortSignal.timeout(15000),
     body
   }))) as GoogleTokenResponse;
 }
 
 export async function getGmailProfile(accessToken: string): Promise<GmailProfile> {
-  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", { headers: { Authorization: `Bearer ${accessToken}` } });
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", { headers: { Authorization: `Bearer ${accessToken}` },signal:AbortSignal.timeout(15000) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`No se pudo consultar Gmail: ${String(data.error?.message || response.statusText)}`);
   return data as GmailProfile;
 }
 
 export async function revokeGoogleToken(token: string): Promise<void> {
-  const response = await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+  const response = await fetch('https://oauth2.googleapis.com/revoke', { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },body:new URLSearchParams({token}),signal:AbortSignal.timeout(15000) });
   if (!response.ok && response.status !== 400) throw new Error(`Google no pudo revocar el acceso (${response.status}).`);
 }
 

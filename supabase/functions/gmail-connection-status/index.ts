@@ -1,4 +1,5 @@
 import { optionsResponse } from "../_shared/cors.ts";
+import {releaseConfiguration} from '../_shared/release.ts';
 import { jsonResponse, errorMessage } from "../_shared/http.ts";
 import { requireAppAdmin } from "../_shared/supabase.ts";
 
@@ -8,6 +9,8 @@ Deno.serve(async (request: Request) => {
   if (!["GET", "POST"].includes(request.method)) return jsonResponse(request, { error: "Método no permitido." }, 405);
   try {
     const admin = await requireAppAdmin(request);
+    const body=request.method==='POST'?await request.json().catch(()=>({})):{};
+    if(body.mode==='release')return jsonResponse(request,releaseConfiguration(request));
     const { client } = admin;
     const [{ data, error }, { data: recentErrors }] = await Promise.all([
       client

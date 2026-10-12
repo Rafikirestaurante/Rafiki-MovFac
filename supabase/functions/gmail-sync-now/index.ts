@@ -1,3 +1,4 @@
+import {SyncBatch, gmailFetch} from '../_shared/syncBatch.ts';
 import {workspaceBanks} from "../_shared/workspaceBanks.ts";
 import { bankQuery } from "../_shared/banks.ts";
 import { extractNequiMovement } from "../_shared/nequi.ts";
@@ -42,7 +43,7 @@ function header(message: GmailMessage, name: string): string {
 }
 
 async function gmailJson<T>(url: string, token: string): Promise<T> {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const response = await gmailFetch(url, token);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Gmail respondió: ${String(data.error?.message || response.statusText)}`);
   return data as T;
@@ -100,6 +101,7 @@ Deno.serve(async (request: Request) => {
   if (preflight) return preflight;
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
+  let batch: SyncBatch | null = null;
   let syncRunId: number | null = null;
   let operationClient: ReturnType<typeof adminClient> | null = null;
   let actorUserId: string | null = null;
@@ -111,10 +113,10 @@ Deno.serve(async (request: Request) => {
     const body = await request.json().catch(() => ({}));
 
     const requestedQuickHours = Number(body.quick_hours ?? 1);
-    const quickHours = [1, 6, 24].includes(requestedQuickHours) ? requestedQuickHours : 1;
-    const quickMessageLimit = quickHours === 24 ? 500 : quickHours === 6 ? 120 : 20;
+    let quickHours = [1, 6, 24].includes(requestedQuickHours) ? requestedQuickHours : 1;
+    let quickMessageLimit = quickHours === 24 ? 500 : quickHours === 6 ? 120 : 20;
     context = await requireAppAdmin(request);
-    const banks = await workspaceBanks(context);
+    let banks = await workspaceBanks(context);
     operationClient = context.client;
     actorUserId = context.user.id;
     actorEmail = context.email;
@@ -123,22 +125,30 @@ Deno.serve(async (request: Request) => {
     const workspaceId = context.workspaceId;
     const now = new Date();
     const requestedMode = String(body.mode || "range").toLowerCase();
-    const syncMode = publicEmployeeAccess || requestedMode === "quick" ? "quick" : "range";
-    const quickStart = new Date(now.getTime() - quickHours * 60 * 60 * 1000);
+    let syncMode = publicEmployeeAccess || requestedMode === "quick" ? "quick" : "range";
+    let quickStart = new Date(now.getTime() - quickHours * 60 * 60 * 1000);
     const defaultFrom = new Date(now.getTime() - 6 * 86400000);
-    const dateFrom = syncMode === "quick"
+    let dateFrom = syncMode === "quick"
       ? isoDay(quickStart.toISOString().slice(0, 10), quickStart)
       : isoDay(body.date_from, defaultFrom);
-    const dateTo = syncMode === "quick" ? isoDay(now.toISOString().slice(0, 10), now) : isoDay(body.date_to, now);
+    let dateTo = syncMode === "quick" ? isoDay(now.toISOString().slice(0, 10), now) : isoDay(body.date_to, now);
     if (dateFrom > dateTo) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
 
-    const {data: run,error: runError} = await client.rpc("begin_workspace_sync", {
-      p_workspace: workspaceId,p_user: actorUserId,
-      p_detail: {phase:"5F",mode:syncMode,banks,quick_hours:syncMode === "quick" ? quickHours : null,start_at:syncMode === "quick" ? quickStart.toISOString() : null,date_from:dateFrom,date_to:dateTo}
-    });
-    if (runError) throw new Error(`No se pudo iniciar la sincronización: ${runError.message}`);
-    if (run.busy) return jsonResponse(request,{error:"Ya existe una sincronización en curso en tu workspace.",active_run_id:run.id},409);
-    syncRunId = Number(run.id);
+    const {data:run,error:runError}=await client.rpc('claim_sync_batch',{p_workspace:workspaceId,p_user:actorUserId,p_kind:'movements',p_request:{mode:syncMode,banks,quick_hours:syncMode === "quick" ? quickHours : null,date_from:syncMode === "range" ? dateFrom : null,date_to:syncMode === "range" ? dateTo : null},p_run:body.resume_run_id ?? null});
+    if(runError) throw new Error(runError.message);
+    if(run.busy) return jsonResponse(request,{error:'Hay una sincronización pendiente en tu workspace. Puedes continuarla desde Configuración.',active_run_id:run.id},409);
+    if(run.completed) return jsonResponse(request,{...run.state.detail,sync_run_id:run.id,status:run.state.stats?.errors?'partial':'success',has_more:false});
+    syncRunId=Number(run.id);
+    batch=new SyncBatch(client,syncRunId,run.lease,run.state || {});
+    if(run.request) {
+      banks=run.request.banks;syncMode=run.request.mode;
+      quickHours=run.request.quick_hours || 1;quickMessageLimit=quickHours===24?500:quickHours===6?120:20;
+    }
+    if(batch.state.parameters) {
+      dateFrom=String(batch.state.parameters.date_from);dateTo=String(batch.state.parameters.date_to);
+      quickStart=new Date(String(batch.state.parameters.start_at));
+    }
+
 
     const { data: connection, error: connectionError } = await client.from("gmail_connections")
       .select("google_email,refresh_token_ciphertext,refresh_token_iv,status")
@@ -155,14 +165,17 @@ Deno.serve(async (request: Request) => {
     endExclusive.setDate(endExclusive.getDate() + 1);
     const before = endExclusive.toISOString().slice(0, 10).replaceAll("-", "/");
     const senderFilter = bankQuery(banks);
-    const queryText = syncMode === "quick"
+    const proposedQueryText = syncMode === "quick"
       ? `${senderFilter} after:${Math.floor(quickStart.getTime() / 1000)}`
       : `${senderFilter} after:${after} before:${before}`;
+    const queryText=String(batch.state.parameters?.query || proposedQueryText);
+    batch.state.parameters ||= {query:queryText,date_from:dateFrom,date_to:dateTo,start_at:quickStart.toISOString()};
     const query = encodeURIComponent(queryText);
     const messageLimit = syncMode === "quick" ? quickMessageLimit : 500;
 
-    let pageToken = "";
-    const refs: Array<{ id: string; threadId?: string }> = [];
+    let pageToken = batch.state.listing_page_token || "";
+    const refs: Array<{ id: string; threadId?: string }> = [...(batch.state.refs || [])];
+    if(!batch.state.listing_done) {
     do {
       const pageSize = syncMode === "quick" ? quickMessageLimit : 100;
       const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=${pageSize}`);
@@ -170,31 +183,46 @@ Deno.serve(async (request: Request) => {
       const page = await gmailJson<GmailListResponse>(url.toString(), token.access_token);
       refs.push(...(page.messages || []));
       pageToken = page.nextPageToken || "";
+      batch.state.refs=refs;batch.state.listing_page_token=pageToken;
+      if(pageToken && refs.length<messageLimit) {
+        await batch.save(true);
+        return jsonResponse(request,{sync_run_id:syncRunId,has_more:true,status:'running',processed:0,messages_found:refs.length});
+      }
       if (refs.length >= messageLimit) break;
     } while (pageToken);
     if (refs.length > messageLimit) refs.splice(messageLimit);
+    batch.state.refs=refs; batch.state.truncated=Boolean(pageToken); batch.state.offset=0;batch.state.listing_done=true;
+    await batch.save();
+    }
+    refs.splice(0,refs.length,...(batch.state.refs || []));
 
-    let messagesScanned = 0;
-    let candidatesCreated = 0;
-    let candidateDuplicates = 0;
-    let errors = 0;
-    let bancolombiaEmails = 0;
-    let movementsCreated = 0;
-    let movementDuplicates = 0;
-    let bancolombiaUnidentified = 0;
+    let messagesScanned = batch.state.stats?.messagesScanned || 0;
+    let candidatesCreated = batch.state.stats?.candidatesCreated || 0;
+    let candidateDuplicates = batch.state.stats?.candidateDuplicates || 0;
+    let errors = batch.state.stats?.errors || 0;
+    let bancolombiaEmails = batch.state.stats?.bancolombiaEmails || 0;
+    let movementsCreated = batch.state.stats?.movementsCreated || 0;
+    let movementDuplicates = batch.state.stats?.movementDuplicates || 0;
+    let bancolombiaUnidentified = batch.state.stats?.bancolombiaUnidentified || 0;
 
-    for (const ref of refs) {
+    const batchStart=Date.now();
+    const initialOffset=batch.state.offset || 0;
+    for (const ref of refs.slice(initialOffset, initialOffset+5)) {
+      if(Date.now()-batchStart>40000) break;
       try {
         const message = await gmailJson<GmailMessage>(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(ref.id)}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`,
           token.access_token
         );
         const receivedAt = message.internalDate ? new Date(Number(message.internalDate)).toISOString() : null;
-        if (syncMode === "quick" && receivedAt && new Date(receivedAt).getTime() < quickStart.getTime()) continue;
+        if (syncMode === "quick" && receivedAt && new Date(receivedAt).getTime() < new Date(String(batch.state.parameters?.start_at)).getTime()) continue;
         messagesScanned += 1;
         const fromHeader = header(message, "From");
         const bank = senderEmail(fromHeader) === "notificaciones@nequi.com.co" ? "nequi" : isBancolombiaNotification(fromHeader,header(message,"Subject")) ? "bancolombia" : null;
         if (!bank || !banks.includes(bank)) continue;
+        batch.state.bankProgress ||= {};
+        batch.state.bankProgress[bank] ||= {scanned:0,unrecognized:0,errors:0};
+        batch.state.bankProgress[bank].scanned++;
         const extract = bank === "nequi" ? extractNequiMovement : extractBancolombiaMovement;
         const extractorVersion = bank === "nequi" ? "nequi-5E-v1" : BANCOLOMBIA_EXTRACTOR_VERSION;
         const baseMetadata = {
@@ -245,6 +273,7 @@ Deno.serve(async (request: Request) => {
 
           if (!extraction) {
             bancolombiaUnidentified += 1;
+            batch.state.bankProgress[bank].unrecognized++;
             await client.from("gmail_sync_candidates").update({
               processing_status: "ignored",
               raw_metadata: {
@@ -281,7 +310,9 @@ Deno.serve(async (request: Request) => {
 
           let movementResult = "movement_created";
           if (existingMovement) {
-            movementDuplicates += 1;
+            // A write may have succeeded before the checkpoint response was lost.
+            if (existingMovement.source_metadata?.sync_run_id === syncRunId) movementsCreated += 1;
+            else movementDuplicates += 1;
             movementResult = "movement_refreshed";
             const { error: refreshMovementError } = await client.from("financial_movements").update({
               transaction_date: extraction.transaction_date,
@@ -353,6 +384,7 @@ Deno.serve(async (request: Request) => {
           }).eq("workspace_id", workspaceId).eq("gmail_message_id", message.id);
         } catch (extractionError) {
           errors += 1;
+          batch.state.bankProgress[bank].errors++;
           await client.from("gmail_sync_candidates").update({
             processing_status: "error",
             raw_metadata: { ...baseMetadata, source_detected: bank, extraction_result: "error", requires_review: true, registered_at: new Date().toISOString(), extractor_version: extractorVersion, error: errorMessage(extractionError) }
@@ -376,10 +408,20 @@ Deno.serve(async (request: Request) => {
           error_message: errorMessage(itemError),
           technical_detail: { phase: "3A.3" }
         });
+      } finally {
+        batch.state.offset=(batch.state.offset || 0)+1;
+        batch.state.stats={messagesScanned,candidatesCreated,candidateDuplicates,errors,bancolombiaEmails,movementsCreated,movementDuplicates,bancolombiaUnidentified};
+        await batch.save();
       }
     }
 
-    const status = errors ? (candidatesCreated || candidateDuplicates ? "partial" : "error") : "success";
+    if((batch.state.offset || 0)<refs.length) {
+      batch.state.last_error=null;
+      await batch.save(true);
+      return jsonResponse(request,{sync_run_id:syncRunId,has_more:true,status:'running',processed:batch.state.offset,messages_found:refs.length,bank_progress:batch.state.bankProgress});
+    }
+
+    const status = errors ? "partial" : "success";
     const finishedAt = new Date().toISOString();
     const detail = {
       phase: publicEmployeeAccess ? "3A.3-public" : "3A.3",
@@ -400,15 +442,9 @@ Deno.serve(async (request: Request) => {
       limited_to: messageLimit,
       quick_message_limit: syncMode === "quick" ? quickMessageLimit : null
     };
-    await client.from("gmail_sync_runs").update({
-      status,
-      finished_at: finishedAt,
-      messages_scanned: messagesScanned,
-      movements_created: movementsCreated,
-      duplicates_ignored: movementDuplicates,
-      errors_count: errors,
-      detail
-    }).eq("id", syncRunId);
+    batch.state.detail={...detail,messages_scanned:messagesScanned,errors_count:errors,duplicates_ignored:movementDuplicates,truncated:batch.state.truncated};
+    batch.state.last_error=null;
+    await batch.save(true,true);
     await client.from("gmail_connections").update({
       status: "connected",
       last_verified_at: finishedAt,
@@ -425,6 +461,9 @@ Deno.serve(async (request: Request) => {
 
     return jsonResponse(request, {
       sync_run_id: syncRunId,
+      has_more:false,
+      truncated:batch.state.truncated,
+      bank_progress:batch.state.bankProgress,
       status,
       banks,
       mode: syncMode,
@@ -445,33 +484,10 @@ Deno.serve(async (request: Request) => {
       quick_message_limit: syncMode === "quick" ? quickMessageLimit : null
     });
   } catch (error) {
-    if (syncRunId && operationClient) {
-      try {
-        const client = operationClient;
-        await client.from("gmail_sync_runs").update({
-          status: "error",
-          finished_at: new Date().toISOString(),
-          errors_count: 1,
-          detail: { phase: "3A.3", fatal_error: errorMessage(error), extractor_version: "multi-bank-5E-v1" }
-        }).eq("id", syncRunId);
-        const fatalDetail = errorMessage(error);
-        await client.from("processing_errors").insert({ workspace_id: context!.workspaceId,
-          sync_run_id: syncRunId,
-          source: "gmail",
-          stage: "sync",
-          error_message: fatalDetail,
-          technical_detail: { phase: "3A.3", fatal: true }
-        });
-        await client.from("gmail_connections").update({ status: "error", last_error: fatalDetail }).eq("workspace_id", context!.workspaceId).eq("owner_user_id", actorUserId);
-      } catch { /* conservar el error original */ }
+    if(batch) {
+      try { batch.state.last_error=errorMessage(error); await batch.save(true); } catch { /* A later claim can recover the expired lease. */ }
     }
-    return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
+    return jsonResponse(request,{error:errorMessage(error),sync_run_id:syncRunId,recoverable:Boolean(batch)},400);
   }
 });
-
-
-
-
-
-
 

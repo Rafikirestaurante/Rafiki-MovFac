@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import ReleaseReadiness from "../components/ReleaseReadiness.jsx";
 import SyncRecovery from "../components/SyncRecovery.jsx";
 import SyncDiagnostic from "../components/SyncDiagnostic.jsx";
 import Icon from "../components/Icons.jsx";
@@ -431,7 +432,7 @@ export default function SettingsPage({ profile }) {
         {statusUnavailable ? <Alert tone="danger">La sincronización está bloqueada porque no se pudo comprobar la comunicación con las Edge Functions. Ejecuta “Diagnosticar comunicación”.</Alert> : !canAttemptGmail ? <Alert tone="warning">Conecta Gmail antes de ejecutar una sincronización.</Alert> : null}
       </section>
 
-      <SyncDiagnostic /><SyncRecovery/>
+      <SyncDiagnostic /><SyncRecovery/><ReleaseReadiness/>
 
       {confirmDisconnect ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setConfirmDisconnect(false)}>

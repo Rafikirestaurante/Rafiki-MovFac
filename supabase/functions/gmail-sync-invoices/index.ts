@@ -1,3 +1,4 @@
+import {SyncBatch, gmailFetch} from '../_shared/syncBatch.ts';
 import { unzipSync } from "npm:fflate@0.8.2";
 import { optionsResponse } from "../_shared/cors.ts";
 import { jsonResponse, errorMessage } from "../_shared/http.ts";
@@ -29,7 +30,7 @@ function header(message: GmailMessage, name: string): string {
   return message.payload?.headers?.find((item) => item.name.toLowerCase() === name.toLowerCase())?.value || "";
 }
 async function gmailJson<T>(url: string, token: string): Promise<T> {
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const response = await gmailFetch(url, token);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Gmail respondió: ${String(data.error?.message || response.statusText)}`);
   return data as T;
@@ -90,25 +91,29 @@ Deno.serve(async (request: Request) => {
   if (preflight) return preflight;
   if (request.method !== "POST") return jsonResponse(request, { error: "Método no permitido." }, 405);
 
+  let batch: SyncBatch | null = null;
   let syncRunId: number | null = null;
-  let operationContext: Awaited<ReturnType<typeof requireAppAdmin>> | null = null;
   try {
     const admin = await requireAppAdmin(request);
-    operationContext = admin;
     const client = admin.client;
     const workspace = {id:admin.workspaceId};
     const body = await request.json().catch(() => ({}));
     const now = new Date();
-    const mode = String(body.mode || "recent") === "range" ? "range" : "recent";
+    let mode = String(body.mode || "recent") === "range" ? "range" : "recent";
     const recentStart = new Date(now.getTime() - 7 * 86400000);
-    const dateFrom = mode === "recent" ? recentStart.toISOString().slice(0, 10) : isoDay(body.date_from, recentStart);
-    const dateTo = mode === "recent" ? now.toISOString().slice(0, 10) : isoDay(body.date_to, now);
+    let dateFrom = mode === "recent" ? recentStart.toISOString().slice(0, 10) : isoDay(body.date_from, recentStart);
+    let dateTo = mode === "recent" ? now.toISOString().slice(0, 10) : isoDay(body.date_to, now);
     if (dateFrom > dateTo) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
 
-    const {data:run,error:runError} = await client.rpc("begin_workspace_sync",{p_workspace:admin.workspaceId,p_user:admin.user.id,p_detail:{phase:"2D",mode,date_from:dateFrom,date_to:dateTo}});
-    if (runError) throw new Error(`No se pudo iniciar la sincronización: ${runError.message}`);
-    if (run.busy) return jsonResponse(request,{error:"Ya existe una sincronización en curso en tu workspace.",active_run_id:run.id},409);
-    syncRunId = Number(run.id);
+    const {data:run,error:runError}=await client.rpc('claim_sync_batch',{p_workspace:admin.workspaceId,p_user:admin.user.id,p_kind:'invoices',p_request:{mode,date_from:mode === "range" ? dateFrom : null,date_to:mode === "range" ? dateTo : null},p_run:body.resume_run_id ?? null});
+    if(runError) throw new Error(runError.message);
+    if(run.busy) return jsonResponse(request,{error:'Hay una sincronización pendiente en tu workspace. Puedes continuarla desde Configuración.',active_run_id:run.id},409);
+    if(run.completed) return jsonResponse(request,{...run.state.detail,sync_run_id:run.id,status:run.state.stats?.errors?'partial':'success',has_more:false});
+    syncRunId=Number(run.id);
+    batch=new SyncBatch(client,syncRunId,run.lease,run.state || {});
+    if(run.request) mode=run.request.mode;
+    if(batch.state.parameters) {dateFrom=String(batch.state.parameters.date_from);dateTo=String(batch.state.parameters.date_to);}
+
 
     const { data: connection, error: connectionError } = await client.from("gmail_connections").select("google_email,refresh_token_ciphertext,refresh_token_iv,status").eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id).maybeSingle();
     if (connectionError) throw new Error(connectionError.message);
@@ -117,9 +122,12 @@ Deno.serve(async (request: Request) => {
     const token = await refreshGoogleAccessToken(refreshToken);
 
     const endExclusive = new Date(`${dateTo}T00:00:00-05:00`); endExclusive.setDate(endExclusive.getDate() + 1);
-    const queryText = `has:attachment {filename:xml filename:zip filename:pdf} after:${dateFrom.replaceAll("-", "/")} before:${endExclusive.toISOString().slice(0, 10).replaceAll("-", "/")}`;
-    const refs: Array<{ id: string; threadId?: string }> = [];
-    let pageToken = "";
+    const proposedQueryText = `has:attachment {filename:xml filename:zip filename:pdf} after:${dateFrom.replaceAll("-", "/")} before:${endExclusive.toISOString().slice(0, 10).replaceAll("-", "/")}`;
+    const queryText=String(batch.state.parameters?.query || proposedQueryText);
+    batch.state.parameters ||= {query:queryText,date_from:dateFrom,date_to:dateTo};
+    const refs: Array<{ id: string; threadId?: string }> = [...(batch.state.refs || [])];
+    let pageToken = batch.state.listing_page_token || "";
+    if(!batch.state.listing_done) {
     do {
       const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
       url.searchParams.set("q", queryText);
@@ -128,13 +136,25 @@ Deno.serve(async (request: Request) => {
       const page = await gmailJson<GmailListResponse>(url.toString(), token.access_token);
       refs.push(...(page.messages || []));
       pageToken = page.nextPageToken || "";
+      batch.state.refs=refs;batch.state.listing_page_token=pageToken;
+      if(pageToken && refs.length<150) {
+        await batch.save(true);
+        return jsonResponse(request,{sync_run_id:syncRunId,has_more:true,status:'running',processed:0,messages_found:refs.length});
+      }
       if (refs.length >= 150) break;
     } while (pageToken);
     if (refs.length > 150) refs.splice(150);
+    batch.state.refs=refs; batch.state.truncated=Boolean(pageToken); batch.state.offset=0;batch.state.listing_done=true;
+    await batch.save();
+    }
+    refs.splice(0,refs.length,...(batch.state.refs || []));
 
-    let messagesScanned = 0, attachmentsScanned = 0, xmlDocuments = 0, pdfFallbacks = 0, invoicesCreated = 0, invoicesUpdated = 0, duplicates = 0, incomplete = 0, errors = 0;
+    let messagesScanned = batch.state.stats?.messagesScanned || 0, attachmentsScanned = batch.state.stats?.attachmentsScanned || 0, xmlDocuments = batch.state.stats?.xmlDocuments || 0, pdfFallbacks = batch.state.stats?.pdfFallbacks || 0, invoicesCreated = batch.state.stats?.invoicesCreated || 0, invoicesUpdated = batch.state.stats?.invoicesUpdated || 0, duplicates = batch.state.stats?.duplicates || 0, incomplete = batch.state.stats?.incomplete || 0, errors = batch.state.stats?.errors || 0;
 
-    for (const ref of refs) {
+    const batchStart=Date.now();
+    const initialOffset=batch.state.offset || 0;
+    for (const ref of refs.slice(initialOffset, initialOffset+2)) {
+      if(Date.now()-batchStart>40000) break;
       try {
         const message = await gmailJson<GmailMessage>(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(ref.id)}?format=full`, token.access_token);
         messagesScanned += 1;
@@ -176,18 +196,22 @@ Deno.serve(async (request: Request) => {
         }
 
         if (!extracted.length) continue;
+        const documentKeys=new Set<string>();
         for (const item of extracted) {
           const parsed = item.parsed;
           const documentKey = await sha256Hex([message.id, item.attachment.filename, item.sourceEntry || "", parsed.cufe || parsed.supplier_tax_id, parsed.invoice_number || "unknown"].join("|"));
-          let existing: { id: string } | null = null;
+          const identity=parsed.cufe || (parsed.supplier_tax_id && parsed.invoice_number ? `${parsed.supplier_tax_id}|${parsed.invoice_number}` : documentKey);
+          if(documentKeys.has(identity)) continue;
+          documentKeys.add(identity);
+          let existing: { id: string; gmail_message_id?:string; source_metadata?:Record<string,unknown> } | null = null;
           if (parsed.cufe) {
-            const { data,error:dedupError } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("cufe", parsed.cufe).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
+            const { data,error:dedupError } = await client.from("electronic_invoices").select("id,gmail_message_id,source_metadata").eq("workspace_id", workspace.id).eq("cufe", parsed.cufe).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
           }
           if (!existing && parsed.supplier_tax_id && parsed.invoice_number) {
-            const { data,error:dedupError } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("supplier_tax_id", parsed.supplier_tax_id).eq("invoice_number", parsed.invoice_number).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
+            const { data,error:dedupError } = await client.from("electronic_invoices").select("id,gmail_message_id,source_metadata").eq("workspace_id", workspace.id).eq("supplier_tax_id", parsed.supplier_tax_id).eq("invoice_number", parsed.invoice_number).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
           }
           if (!existing) {
-            const { data,error:dedupError } = await client.from("electronic_invoices").select("id").eq("workspace_id", workspace.id).eq("document_key", documentKey).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
+            const { data,error:dedupError } = await client.from("electronic_invoices").select("id,gmail_message_id,source_metadata").eq("workspace_id", workspace.id).eq("document_key", documentKey).limit(1).maybeSingle(); if(dedupError) throw dedupError; existing = data;
           }
           const row = {
             workspace_id: admin.workspaceId, gmail_message_id: message.id,
@@ -214,12 +238,13 @@ Deno.serve(async (request: Request) => {
             sender_email: from,
             email_subject: subject,
             email_received_at: receivedAt,
-            source_metadata: { ...parsed.source_metadata, zip_entry: item.sourceEntry || null, extraction_confidence: parsed.extraction_confidence, sync_run_id: syncRunId }
+            source_metadata: { ...parsed.source_metadata, zip_entry: item.sourceEntry || null, extraction_confidence: parsed.extraction_confidence, sync_run_id: syncRunId, created_sync_run_id: existing ? existing.source_metadata?.created_sync_run_id ?? null : syncRunId }
           };
           if (existing) {
             const { error } = await client.from("electronic_invoices").update(row).eq("workspace_id",admin.workspaceId).eq("id", existing.id);
             if (error) throw error;
-            invoicesUpdated += 1; duplicates += 1;
+            if(existing.source_metadata?.created_sync_run_id===syncRunId && existing.gmail_message_id===message.id) invoicesCreated += 1;
+            else {invoicesUpdated += 1; duplicates += 1;}
           } else {
             const { error } = await client.from("electronic_invoices").insert({ ...row, workspace_id: workspace.id });
             if (error) throw error;
@@ -237,28 +262,34 @@ Deno.serve(async (request: Request) => {
       } catch (itemError) {
         errors += 1;
         await client.from("processing_errors").insert({ workspace_id: admin.workspaceId, sync_run_id: syncRunId, gmail_message_id: ref.id, source: "invoice", stage: "invoice_extraction", error_message: errorMessage(itemError), technical_detail: { phase: "2D", extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION } });
+      } finally {
+        batch.state.offset=(batch.state.offset || 0)+1;
+        batch.state.stats={messagesScanned,attachmentsScanned,xmlDocuments,pdfFallbacks,invoicesCreated,invoicesUpdated,duplicates,incomplete,errors};
+        await batch.save();
       }
     }
 
-    const status = errors ? (invoicesCreated || invoicesUpdated ? "partial" : "error") : "success";
+    if((batch.state.offset || 0)<refs.length) {
+      batch.state.last_error=null;
+      await batch.save(true);
+      return jsonResponse(request,{sync_run_id:syncRunId,has_more:true,status:'running',processed:batch.state.offset,messages_found:refs.length,bank_progress:batch.state.bankProgress});
+    }
+
+    const status = errors ? "partial" : "success";
     const detail = { phase: "2D", mode, date_from: dateFrom, date_to: dateTo, messages_found: refs.length, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, extractor_version: ELECTRONIC_INVOICE_EXTRACTOR_VERSION };
     const finishedAt = new Date().toISOString();
-    await client.from("gmail_sync_runs").update({ status, finished_at: finishedAt, messages_scanned: messagesScanned, invoices_created: invoicesCreated, duplicates_ignored: duplicates, errors_count: errors, detail }).eq("id", syncRunId);
+    batch.state.detail={...detail,messages_scanned:messagesScanned,errors_count:errors,truncated:batch.state.truncated};
+    batch.state.last_error=null;
+    await batch.save(true,true);
     await client.from("gmail_connections").update({ status: "connected", last_verified_at: finishedAt, last_sync_at: finishedAt, last_error: errors ? `${errors} correo(s) de facturación presentaron errores.` : null }).eq("workspace_id", admin.workspaceId).eq("owner_user_id", admin.user.id);
     await client.from("gmail_integration_audit").insert({ workspace_id: admin.workspaceId, event_type: "invoice_sync", user_id: admin.user.id, user_email: admin.email, google_email: connection.google_email, detail: { sync_run_id: syncRunId, ...detail, errors } });
-    return jsonResponse(request, { sync_run_id: syncRunId, status, messages_found: refs.length, messages_scanned: messagesScanned, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, errors_count: errors });
+    return jsonResponse(request, { sync_run_id: syncRunId, status, has_more:false,truncated:batch.state.truncated, messages_found: refs.length, messages_scanned: messagesScanned, attachments_scanned: attachmentsScanned, xml_documents: xmlDocuments, pdf_fallbacks: pdfFallbacks, invoices_created: invoicesCreated, invoices_updated: invoicesUpdated, duplicates_ignored: duplicates, incomplete_documents: incomplete, errors_count: errors });
   } catch (error) {
-    if (syncRunId) {
-      try {
-        const admin = operationContext;
-        if (!admin) throw new Error("Contexto no disponible");
-        await admin.client.from("gmail_sync_runs").update({ status: "error", finished_at: new Date().toISOString(), errors_count: 1, detail: { phase: "2D", fatal_error: errorMessage(error) } }).eq("id", syncRunId);
-      } catch { /* conservar error original */ }
+    if(batch) {
+      try { batch.state.last_error=errorMessage(error); await batch.save(true); } catch { /* A later claim can recover the expired lease. */ }
     }
-    return jsonResponse(request, { error: errorMessage(error), sync_run_id: syncRunId }, 400);
+    return jsonResponse(request,{error:errorMessage(error),sync_run_id:syncRunId,recoverable:Boolean(batch)},400);
   }
 });
-
-
 
 
