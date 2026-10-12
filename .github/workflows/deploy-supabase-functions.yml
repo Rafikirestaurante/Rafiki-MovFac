@@ -8,6 +8,11 @@ on:
       - "supabase/functions/**"
       - "supabase/config.toml"
       - ".github/workflows/deploy-supabase-functions.yml"
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "supabase/*.sql"
+      - "package*.json"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +23,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate release locally
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
   deploy:
+    needs: validate
     name: Deploy functions to Rafiki MF
     runs-on: ubuntu-latest
 
@@ -70,9 +87,3 @@ jobs:
 
       - name: Deploy gmail-sync-invoices
         run: supabase functions deploy gmail-sync-invoices --project-ref "$SUPABASE_PROJECT_REF"
-
-      - name: Deploy employee-access-admin
-        run: supabase functions deploy employee-access-admin --project-ref "$SUPABASE_PROJECT_REF"
-
-      - name: Deploy employee-public-access
-        run: supabase functions deploy employee-public-access --project-ref "$SUPABASE_PROJECT_REF"
