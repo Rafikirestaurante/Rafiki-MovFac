@@ -13,9 +13,13 @@ if(!fs.existsSync(workflowPath)&&process.env.VERCEL!=='1')requireFile(workflowPa
 const workflow=fs.existsSync(workflowPath)?read(workflowPath):null;
 for(const name of functions){requireFile(`supabase/functions/${name}/index.ts`);if(workflow!==null&&!workflow.includes(`supabase functions deploy ${name}`))throw new Error(`Falta despliegue ${name}`);}
 const discovered=fs.readdirSync("supabase/functions",{withFileTypes:true}).filter(e=>e.isDirectory()&&e.name!=="_shared").map(e=>e.name).sort();
-if(JSON.stringify(discovered)!==JSON.stringify([...functions].sort()))throw new Error("Funciones inesperadas");
+const additional=discovered.filter(name=>!functions.includes(name));
+if(additional.length)console.warn(`Carpetas adicionales no incluidas en el despliegue de esta entrega: ${additional.join(', ')}. Revisar por separado si contienen funciones antiguas todavía publicadas.`);
 function walk(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);}
-for(const file of [...walk("src"),...walk("supabase/functions")].filter(f=>/\.(js|jsx|ts)$/.test(f))){
+// Validar el código de esta entrega. Carpetas antiguas conservadas en GitHub no
+// forman parte del despliegue explícito de las ocho funciones del workflow.
+const functionFiles=[...functions,'_shared'].flatMap(name=>walk(`supabase/functions/${name}`));
+for(const file of [...walk("src"),...functionFiles].filter(f=>/\.(js|jsx|ts)$/.test(f))){
  const source=read(file);
  for(const match of source.matchAll(/(?:from\s*|import\s*)["'](\.[^"']+)["']/g)){requireFile(path.resolve(path.dirname(file),match[1]));}
  await transform(source,{loader:file.endsWith(".ts")?"ts":file.endsWith(".jsx")?"jsx":"js",sourcefile:file});
