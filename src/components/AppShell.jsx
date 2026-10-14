@@ -62,7 +62,20 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <div className="mobile-brand"><span>R</span> Rafiki Finanzas</div>
           <div className="avatar small">{String(profile?.display_name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
         </div>
-        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "..." : autoSync?.movements?.enabled ? (autoSync?.movements?.intervalSeconds === 60 ? "1 min" : `${autoSync?.movements?.intervalSeconds || 10} s`) : "Off"}</span><MovementSyncInterval seconds={autoSync?.movements?.intervalSeconds} onChange={onMovementIntervalChange} /><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "..." : autoSync?.invoices?.enabled ? "60 s" : "Off"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
+        <div className="content-wrap">
+          <div className="auto-sync-control-row">
+            {['movements','invoices'].map(module=>{
+              const sync=autoSync?.[module]||{};
+              const isPush=sync.mode==='push', checking=sync.mode==='checking';
+              return <div key={module} className={`auto-sync-control ${sync.enabled?'enabled':'disabled'}`}>
+                <span className="sync-dot"></span><strong>{module==='movements'?'Movimientos':'Facturas'}</strong>
+                <span>{checking?'…':isPush?'Push':sync.active?'…':sync.enabled?(module==='invoices'||sync.intervalSeconds===60?'1 min':`${sync.intervalSeconds||10} s`):'Off'}</span>
+                {module==='movements'&&!isPush&&!checking&&<MovementSyncInterval seconds={sync.intervalSeconds} onChange={onMovementIntervalChange}/>}
+                <button onClick={isPush||checking?()=>navigate('configuracion'):module==='movements'?onToggleMovements:onToggleInvoices}>{isPush||checking?'Configurar':sync.enabled?'Desactivar':'Activar'}</button>
+              </div>;
+            })}
+          </div>{children}
+        </div>
       </main>
 
       <nav className="bottom-nav">

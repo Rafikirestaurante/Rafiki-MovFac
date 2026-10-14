@@ -7,6 +7,8 @@ import InvoicesPage from "./pages/InvoicesPage.jsx";
 import ReportsPage from "./pages/ReportsPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import UserAdminPage from "./pages/UserAdminPage.jsx";
+import useGmailPush from "./components/useGmailPush.js";
+import {syncMode} from "./services/syncModes.js";
 import { Alert } from "./components/Ui.jsx";
 import { getCurrentProfile, getSession, onAuthStateChange, signOut } from "./services/authService.js";
 import { syncGmailQuick, syncInvoicesRecent, isGmailSyncBusy } from "./services/gmailIntegrationService.js";
@@ -34,6 +36,9 @@ export default function App() {
   const [movementsAutoEnabled, setMovementsAutoEnabled] = useState(() => localStorage.getItem("rafiki_movements_auto_sync") !== "false");
   const [invoicesAutoEnabled, setInvoicesAutoEnabled] = useState(() => localStorage.getItem("rafiki_invoices_auto_sync") === "true");
   const [autoSync, setAutoSync] = useState({ movements: { active: false, lastRun: null, message: "" }, invoices: { active: false, lastRun: null, message: "" } });
+  const push=useGmailPush(userId,Boolean(profile?.id===userId&&["platform_admin", "workspace_owner", "admin"].includes(profile?.role)));
+  const movementMode=syncMode(push.data?.state,'movements',movementsAutoEnabled,push.ready,push.changing);
+  const invoiceMode=syncMode(push.data?.state,'invoices',invoicesAutoEnabled,push.ready,push.changing);
   const [activePage, setActivePage] = useState(() => {
     const requested = window.location.hash.replace("#", "") || "inicio";
     return pages[requested] ? requested : "inicio";
@@ -110,12 +115,12 @@ export default function App() {
       finally { invoiceRunning = false; }
     };
     // Deja que la sesión y la pestaña inicial terminen de cargar antes de consultar Gmail.
-    const initialMovementTimer = movementsAutoEnabled ? window.setTimeout(syncMovements, movementIntervalSeconds * 1000) : null;
-    const initialInvoiceTimer = invoicesAutoEnabled ? window.setTimeout(syncInvoices, 10000) : null;
-    const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, movementIntervalSeconds * 1000) : null;
-    const invoiceTimer = invoicesAutoEnabled ? window.setInterval(syncInvoices, 60000) : null;
+    const initialMovementTimer = movementMode === 'periodic' ? window.setTimeout(syncMovements, movementIntervalSeconds * 1000) : null;
+    const initialInvoiceTimer = invoiceMode === 'periodic' ? window.setTimeout(syncInvoices, 10000) : null;
+    const movementTimer = movementMode === 'periodic' ? window.setInterval(syncMovements, movementIntervalSeconds * 1000) : null;
+    const invoiceTimer = invoiceMode === 'periodic' ? window.setInterval(syncInvoices, 60000) : null;
     return () => { disposed = true; window.clearTimeout(initialMovementTimer); window.clearTimeout(initialInvoiceTimer); window.clearInterval(movementTimer); window.clearInterval(invoiceTimer); };
-  }, [session, profile, movementsAutoEnabled, invoicesAutoEnabled, movementIntervalSeconds]);
+  }, [session, profile, movementMode, invoiceMode, movementIntervalSeconds]);
 
   function toggleMovementsAutoSync() {
     setMovementsAutoEnabled((value) => { const next = !value; localStorage.setItem("rafiki_movements_auto_sync", String(next)); return next; });
@@ -143,8 +148,8 @@ export default function App() {
 
   const Page = pages[activePage] || DashboardPage;
   return (
-    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, enabled: movementsAutoEnabled, intervalSeconds: movementIntervalSeconds }, invoices: { ...autoSync.invoices, enabled: invoicesAutoEnabled } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync} onMovementIntervalChange={changeMovementInterval}>
-      <Page profile={profile} onNavigate={navigate} syncIndicator={activePage === "movimientos" ? autoSync.movements : activePage === "facturas" ? autoSync.invoices : null} />
+    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, active: movementMode==='periodic'&&autoSync.movements.active, mode:movementMode, enabled: movementMode==='periodic'||movementMode==='push', intervalSeconds: movementIntervalSeconds }, invoices: { ...autoSync.invoices, active: invoiceMode==='periodic'&&autoSync.invoices.active, mode:invoiceMode, enabled: invoiceMode==='periodic'||invoiceMode==='push' } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync} onMovementIntervalChange={changeMovementInterval}>
+      <Page profile={profile} onNavigate={navigate} push={push} syncIndicator={activePage === "movimientos" ? {...autoSync.movements,active:movementMode==='periodic'&&autoSync.movements.active} : activePage === "facturas" ? {...autoSync.invoices,active:invoiceMode==='periodic'&&autoSync.invoices.active} : null} />
     </AppShell>
   );
 }

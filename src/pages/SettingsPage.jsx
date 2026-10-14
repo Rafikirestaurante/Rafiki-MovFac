@@ -37,7 +37,7 @@ function formatTechnicalError(value) {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
-export default function SettingsPage({ profile }) {
+export default function SettingsPage({ profile, push }) {
   const [status, setStatus] = useState({ configured: false, connection: null });
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState("");
@@ -433,7 +433,7 @@ export default function SettingsPage({ profile }) {
         {statusUnavailable ? <Alert tone="danger">La sincronización está bloqueada porque no se pudo comprobar la comunicación con las Edge Functions. Ejecuta “Diagnosticar comunicación”.</Alert> : !canAttemptGmail ? <Alert tone="warning">Conecta Gmail antes de ejecutar una sincronización.</Alert> : null}
       </section>
 
-      <SyncDiagnostic /><GmailPushSettings /><SyncRecovery/><ReleaseReadiness/>
+      <SyncDiagnostic /><GmailPushSettings push={push} /><SyncRecovery/><ReleaseReadiness/>
 
       {confirmDisconnect ? (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setConfirmDisconnect(false)}>
