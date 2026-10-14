@@ -18,6 +18,6 @@ function validateFixture(missing=false) {
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 }
 describe('Validación con carpetas históricas en GitHub',()=>{
- it('identifica carpetas adicionales y valida las funciones actuales',()=>{const result=validateFixture();expect(result.status).toBe(0);expect(result.stderr).toContain('employee-public-retired');expect(result.stderr).toContain('.temp');expect(result.stdout).toContain('8 Edge Functions');});
+ it('identifica carpetas adicionales y valida las funciones actuales',()=>{const result=validateFixture();expect(result.status).toBe(0);expect(result.stderr).toContain('employee-public-retired');expect(result.stderr).toContain('.temp');expect(result.stdout).toContain('11 Edge Functions');});
  it('sigue fallando si falta una función requerida',()=>{const result=validateFixture(true);expect(result.status).not.toBe(0);expect(result.stderr).toContain('gmail-sync-now/index.ts');});
 });

@@ -1,8 +1,8 @@
-# Rafiki MF — 1.11.0 · Fase 6
+# Rafiki MF — 1.12.0 · Fase 6
 
 Preparación para producción sobre 1.10.0. No incorpora 5H ni 5J.
 
-Lee primero [la guía de Fase 6](docs/FASE-6-1.11.0.md).
+Lee primero [la guía de Fase 6](docs/FASE-6-1.12.0.md).
 
 ## Instalación
 

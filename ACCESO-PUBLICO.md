@@ -1,6 +1,6 @@
-# Preparación 6B sobre 1.11.0
+# Preparación 6B sobre 1.12.0
 
-Esta entrega conserva la versión técnica 1.11.0 y añade páginas públicas de presentación y privacidad, enlaces desde el acceso y corrección del texto de registro. No cambia permisos ni añade inicio de sesión con Google.
+Esta entrega conserva la versión técnica 1.12.0 y añade páginas públicas de presentación y privacidad, enlaces desde el acceso y corrección del texto de registro. No cambia permisos ni añade inicio de sesión con Google.
 
 Revisar el texto de privacidad antes de publicarlo: expresa compromisos sobre uso limitado, soporte y solicitudes de eliminación que el responsable deberá cumplir. No representa una verificación legal ni una auditoría de las políticas desplegadas.
 

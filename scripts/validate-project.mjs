@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {transform} from "esbuild";
-const expectedVersion="1.11.0";
-const functions=["gmail-oauth-start","gmail-oauth-callback","gmail-connection-status","gmail-test-connection","gmail-diagnostics","gmail-disconnect","gmail-sync-now","gmail-sync-invoices"];
+const expectedVersion="1.12.0";
+const functions=["gmail-oauth-start","gmail-oauth-callback","gmail-connection-status","gmail-test-connection","gmail-diagnostics","gmail-disconnect","gmail-sync-now","gmail-sync-invoices","gmail-push-settings","gmail-push-webhook","gmail-push-worker"];
 const read=file=>fs.readFileSync(file,"utf8");
 const requireFile=file=>{if(!fs.existsSync(file))throw new Error(`Falta ${file}`);};
 for(const file of ["src/App.jsx","src/config/appMetadata.js","src/pages/SettingsPage.jsx","src/pages/MovementsPage.jsx","supabase/2026-10-12-fase5f-isolation.sql","supabase/config.toml"])requireFile(file);
@@ -27,3 +27,4 @@ for(const file of [...walk("src"),...functionFiles].filter(f=>/\.(js|jsx|ts)$/.t
 const vercel=JSON.parse(read("vercel.json"));
 if(vercel.outputDirectory!=="dist")throw new Error("Salida Vercel incorrecta");
 console.log(`Validación estructural y sintaxis aprobada: ${expectedVersion}, ${functions.length} Edge Functions.`);
+
