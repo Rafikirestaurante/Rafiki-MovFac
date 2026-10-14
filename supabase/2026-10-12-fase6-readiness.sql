@@ -63,7 +63,7 @@ begin
  checks:=checks || jsonb_build_array(jsonb_build_object('key','report_session','ok',coalesce(ok,false)));
  select exists(select 1 from pg_index where indexrelid=to_regclass('public.financial_movements_workspace_message_type_unique') and indisunique and indisvalid) into ok;
  checks:=checks || jsonb_build_array(jsonb_build_object('key','movement_dedup','ok',ok));
- return jsonb_build_object('schema_version','1.11.0','checked_at',now(),'checks',checks,
+ return jsonb_build_object('schema_version','1.12.0','checked_at',now(),'checks',checks,
  'ok',not exists(select 1 from jsonb_array_elements(checks) c where not (c->>'ok')::boolean));
 end $$;
 revoke all on function public.workspace_release_health() from public,anon;

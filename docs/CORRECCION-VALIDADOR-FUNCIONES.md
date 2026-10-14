@@ -1,4 +1,4 @@
-# Corrección del validador de funciones — 1.11.0
+# Corrección del validador de funciones — 1.12.0
 
 El log de Vercel confirma que las pruebas y PostgreSQL local pasaron. La validación posterior fallaba porque exigía que supabase/functions contuviera exactamente ocho carpetas más _shared. Una carpeta histórica o temporal adicional era suficiente para bloquear el build.
 

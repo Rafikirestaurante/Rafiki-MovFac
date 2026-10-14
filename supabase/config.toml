@@ -2,3 +2,9 @@ project_id = "rafiki-movimientos-facturas"
 
 [functions.gmail-oauth-callback]
 verify_jwt = false
+
+[functions.gmail-push-webhook]
+verify_jwt = false
+
+[functions.gmail-push-worker]
+verify_jwt = false

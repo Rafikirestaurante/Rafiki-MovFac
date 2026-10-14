@@ -1,5 +1,5 @@
 import {allowedOrigins} from './cors.ts';
-export const RELEASE_VERSION='1.11.0';
+export const RELEASE_VERSION='1.12.0';
 export function releaseConfiguration(request:Request) {
  const get=(key:string)=>String(Deno.env.get(key)||'').trim();
  const checks:Array<{key:string;ok:boolean}>=[];

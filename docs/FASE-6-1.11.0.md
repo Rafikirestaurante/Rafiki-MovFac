@@ -1,4 +1,4 @@
-# Fase 6 — Preparación para producción · 1.11.0
+# Fase 6 — Preparación para producción · 1.12.0
 
 Base: 1.10.0, con los SQL 5G y 5I instalados según confirmación del usuario. Las fases 5H y 5J se mantienen pendientes y no se implementan aquí.
 
@@ -20,7 +20,7 @@ Base: 1.10.0, con los SQL 5G y 5I instalados según confirmación del usuario. L
 3. En el SQL Editor de ese mismo Supabase ejecuta completo `supabase/2026-10-12-fase6-readiness.sql`. Es repetible y no elimina movimientos ni reasigna propietarios. Necesita la base de 5F/5G/5I. No vuelvas a ejecutar indiscriminadamente todos los SQL históricos.
 4. Sube el contenido de esta entrega, incluido package-lock.json. GitHub validará y desplegará las ocho Edge Functions; Vercel validará y publicará la web. El módulo compartido cambió: desplegar solamente gmail-sync-now dejaría las otras funciones con controles diferentes.
 5. Usa Node 24 en Vercel y en desarrollo (también se admite Node 22.13 o posterior de la rama 22). No omitas las dependencias de desarrollo durante el build: contienen los verificadores y el compilador.
-6. Actualiza la aplicación/PWA. Configuración debe mostrar 1.11.0 y Fase 6. Pulsa Comprobar instalación. Web, servidor consultado y base deben coincidir en 1.11.0.
+6. Actualiza la aplicación/PWA. Configuración debe mostrar 1.12.0 y Fase 6. Pulsa Comprobar instalación. Web, servidor consultado y base deben coincidir en 1.12.0.
 7. Prueba conexión Gmail, una búsqueda de movimientos, una de facturas y un reporte. Comprueba que las notificaciones sin regla siguen disponibles y el diagnóstico sigue únicamente en Configuración.
 
 Si ves «Origen no autorizado», corrige APP_PUBLIC_URL/APP_ALLOWED_ORIGINS; no retires la comprobación. Un preview de Vercel requiere su origen exacto y no queda autorizado automáticamente.
