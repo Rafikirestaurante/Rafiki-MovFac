@@ -87,3 +87,12 @@ jobs:
 
       - name: Deploy gmail-sync-invoices
         run: supabase functions deploy gmail-sync-invoices --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Deploy gmail-push-settings
+        run: supabase functions deploy gmail-push-settings --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Deploy gmail-push-webhook
+        run: supabase functions deploy gmail-push-webhook --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Deploy gmail-push-worker
+        run: supabase functions deploy gmail-push-worker --project-ref "$SUPABASE_PROJECT_REF"
