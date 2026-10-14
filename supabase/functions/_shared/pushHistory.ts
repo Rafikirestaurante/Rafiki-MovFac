@@ -4,6 +4,7 @@ export function historyMessageIds(records: Array<{messagesAdded?:Array<{message?
 export function decodePushMessage(data: string): {emailAddress:string;historyId:string} {
  if(typeof data!=='string'||data.length>4096) throw new Error('Aviso Gmail inválido');
  const payload=JSON.parse(atob(data.replace(/-/g,'+').replace(/_/g,'/')));
- if(typeof payload.emailAddress!=='string'||!/^\S+@\S+\.\S+$/.test(payload.emailAddress)||!/^\d{1,30}$/.test(payload.historyId)||typeof payload.historyId!=='string') throw new Error('Aviso Gmail inválido');
- return {emailAddress:payload.emailAddress.toLowerCase(),historyId:payload.historyId};
+ const historyId=typeof payload.historyId==='number'&&Number.isSafeInteger(payload.historyId)&&payload.historyId>=0?String(payload.historyId):payload.historyId;
+ if(typeof payload.emailAddress!=='string'||!/^\S+@\S+\.\S+$/.test(payload.emailAddress)||typeof historyId!=='string'||!/^\d{1,30}$/.test(historyId)) throw new Error('Aviso Gmail inválido');
+ return {emailAddress:payload.emailAddress.toLowerCase(),historyId};
 }

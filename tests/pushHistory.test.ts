@@ -7,7 +7,10 @@ describe('Avisos Gmail',()=>{
  it('conserva historial mayor que el rango seguro de Number',()=>{
   expect(decodePushMessage(btoa(JSON.stringify({emailAddress:'A@EXAMPLE.TEST',historyId:'90071992547409930001'})))).toEqual({emailAddress:'a@example.test',historyId:'90071992547409930001'});
  });
- it('rechaza el historial numérico y los cuerpos inválidos',()=>{
-  for(const payload of [{emailAddress:'a@test.example',historyId:42},{emailAddress:'a@test.example',historyId:'1e5'},{emailAddress:'sin-correo',historyId:'42'}])expect(()=>decodePushMessage(btoa(JSON.stringify(payload)))).toThrow();
+ it('normaliza historial numérico seguro sin perder precisión',()=>{
+  expect(decodePushMessage(btoa(JSON.stringify({emailAddress:'a@test.example',historyId:42})))).toEqual({emailAddress:'a@test.example',historyId:'42'});
+ });
+ it('rechaza el historial numérico impreciso y los cuerpos inválidos',()=>{
+  for(const payload of [{emailAddress:'a@test.example',historyId:9007199254740992},{emailAddress:'a@test.example',historyId:-1},{emailAddress:'a@test.example',historyId:1.5},{emailAddress:'a@test.example',historyId:'1e5'},{emailAddress:'sin-correo',historyId:'42'}])expect(()=>decodePushMessage(btoa(JSON.stringify(payload)))).toThrow();
  });
 });
