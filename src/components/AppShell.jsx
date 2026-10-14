@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Icon from "./Icons.jsx";
 import { Badge } from "./Ui.jsx";
+import MovementSyncInterval from "./MovementSyncInterval.jsx";
 
 const navigation = [
   { id: "inicio", label: "Inicio", icon: "home" },
@@ -10,7 +11,7 @@ const navigation = [
   { id: "configuracion", label: "Configuración", icon: "settings" }
 ];
 
-export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync, onToggleMovements, onToggleInvoices }) {
+export default function AppShell({ activePage, onNavigate, profile, onLogout, children, autoSync, onToggleMovements, onToggleInvoices, onMovementIntervalChange }) {
   const [open, setOpen] = useState(false);
   const roleLabel = profile?.role === "platform_admin" ? "Administrador de plataforma" : profile?.role === "workspace_owner" ? "Administrador del workspace" : "Revisor";
 
@@ -61,7 +62,7 @@ export default function AppShell({ activePage, onNavigate, profile, onLogout, ch
           <div className="mobile-brand"><span>R</span> Rafiki Finanzas</div>
           <div className="avatar small">{String(profile?.display_name || profile?.email || "U").slice(0, 1).toUpperCase()}</div>
         </div>
-        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "..." : autoSync?.movements?.enabled ? "10 s" : "Off"}</span><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "..." : autoSync?.invoices?.enabled ? "60 s" : "Off"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
+        <div className="content-wrap"><div className="auto-sync-control-row"><div className={`auto-sync-control ${autoSync?.movements?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Movimientos</strong><span>{autoSync?.movements?.active ? "..." : autoSync?.movements?.enabled ? (autoSync?.movements?.intervalSeconds === 60 ? "1 min" : `${autoSync?.movements?.intervalSeconds || 10} s`) : "Off"}</span><MovementSyncInterval seconds={autoSync?.movements?.intervalSeconds} onChange={onMovementIntervalChange} /><button onClick={onToggleMovements}>{autoSync?.movements?.enabled ? "Desactivar" : "Activar"}</button></div><div className={`auto-sync-control ${autoSync?.invoices?.enabled ? "enabled" : "disabled"}`}><span className="sync-dot"></span><strong>Facturas</strong><span>{autoSync?.invoices?.active ? "..." : autoSync?.invoices?.enabled ? "60 s" : "Off"}</span><button onClick={onToggleInvoices}>{autoSync?.invoices?.enabled ? "Desactivar" : "Activar"}</button></div></div>{children}</div>
       </main>
 
       <nav className="bottom-nav">

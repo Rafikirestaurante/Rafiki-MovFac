@@ -26,6 +26,9 @@ function LoadingScreen() {
 
 export default function App() {
   const [session, setSession] = useState(undefined);
+  const [movementIntervalPreference, setMovementIntervalPreference] = useState({ userId: null, seconds: 10 });
+  const userId = session?.user?.id;
+  const movementIntervalSeconds = movementIntervalPreference.userId === userId ? movementIntervalPreference.seconds : 10;
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [movementsAutoEnabled, setMovementsAutoEnabled] = useState(() => localStorage.getItem("rafiki_movements_auto_sync") !== "false");
@@ -42,6 +45,23 @@ export default function App() {
     const subscription = onAuthStateChange((current) => setSession(current));
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    let seconds = 10;
+    if (userId) {
+      try {
+        const saved = Number(localStorage.getItem(`rafiki_movement_interval:${userId}`));
+        if ([10, 30, 60].includes(saved)) seconds = saved;
+      } catch { /* El selector sigue funcionando cuando el almacenamiento no está disponible. */ }
+    }
+    setMovementIntervalPreference({ userId, seconds });
+  }, [userId]);
+
+  function changeMovementInterval(seconds) {
+    if (!userId || ![10, 30, 60].includes(seconds)) return;
+    try { localStorage.setItem(`rafiki_movement_interval:${userId}`, String(seconds)); } catch { /* Preferencia válida durante esta sesión. */ }
+    setMovementIntervalPreference({ userId, seconds });
+  }
 
   useEffect(() => {
     if (!session) {
@@ -90,12 +110,12 @@ export default function App() {
       finally { invoiceRunning = false; }
     };
     // Deja que la sesión y la pestaña inicial terminen de cargar antes de consultar Gmail.
-    const initialMovementTimer = movementsAutoEnabled ? window.setTimeout(syncMovements, 10000) : null;
+    const initialMovementTimer = movementsAutoEnabled ? window.setTimeout(syncMovements, movementIntervalSeconds * 1000) : null;
     const initialInvoiceTimer = invoicesAutoEnabled ? window.setTimeout(syncInvoices, 10000) : null;
-    const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, 10000) : null;
+    const movementTimer = movementsAutoEnabled ? window.setInterval(syncMovements, movementIntervalSeconds * 1000) : null;
     const invoiceTimer = invoicesAutoEnabled ? window.setInterval(syncInvoices, 60000) : null;
     return () => { disposed = true; window.clearTimeout(initialMovementTimer); window.clearTimeout(initialInvoiceTimer); window.clearInterval(movementTimer); window.clearInterval(invoiceTimer); };
-  }, [session, profile, movementsAutoEnabled, invoicesAutoEnabled]);
+  }, [session, profile, movementsAutoEnabled, invoicesAutoEnabled, movementIntervalSeconds]);
 
   function toggleMovementsAutoSync() {
     setMovementsAutoEnabled((value) => { const next = !value; localStorage.setItem("rafiki_movements_auto_sync", String(next)); return next; });
@@ -123,7 +143,7 @@ export default function App() {
 
   const Page = pages[activePage] || DashboardPage;
   return (
-    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, enabled: movementsAutoEnabled }, invoices: { ...autoSync.invoices, enabled: invoicesAutoEnabled } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync}>
+    <AppShell activePage={activePage} onNavigate={navigate} profile={profile} onLogout={logout} autoSync={{ movements: { ...autoSync.movements, enabled: movementsAutoEnabled, intervalSeconds: movementIntervalSeconds }, invoices: { ...autoSync.invoices, enabled: invoicesAutoEnabled } }} onToggleMovements={toggleMovementsAutoSync} onToggleInvoices={toggleInvoicesAutoSync} onMovementIntervalChange={changeMovementInterval}>
       <Page profile={profile} onNavigate={navigate} syncIndicator={activePage === "movimientos" ? autoSync.movements : activePage === "facturas" ? autoSync.invoices : null} />
     </AppShell>
   );
