@@ -1,5 +1,6 @@
 import {describe,it,expect,vi,beforeAll,beforeEach} from 'vitest';
-const mock=vi.hoisted(()=>({rpc:vi.fn(),context:vi.fn(),movement:vi.fn(),invoice:vi.fn(),wake:vi.fn(),gmail:vi.fn()}));
+const mock=vi.hoisted(()=>({rpc:vi.fn(),context:vi.fn(),movement:vi.fn(),invoice:vi.fn(),wake:vi.fn(),gmail:vi.fn(),recover:vi.fn()}));
+vi.mock('../supabase/functions/_shared/recoverPushBlocker.ts',()=>({recoverPushBlocker:mock.recover}));
 vi.mock('../supabase/functions/_shared/supabase.ts',()=>({adminClient:()=>({rpc:mock.rpc})}));
 vi.mock('../supabase/functions/_shared/push.ts',()=>({pushOwnerContext:mock.context,pushToken:async()=>({email:'a@example.test',token:'token'}),watchGmail:async()=>({expiration:new Date(Date.now()+7*86400000).toISOString()}),wakePushWorker:mock.wake}));
 vi.mock('../supabase/functions/_shared/workspaceBanks.ts',()=>({workspaceBanks:async()=>['nequi']}));
@@ -16,6 +17,7 @@ beforeAll(async()=>{
  await import('../supabase/functions/gmail-push-worker/index.ts');
 });
 beforeEach(()=>{
+ mock.recover.mockReset().mockResolvedValue({recovered_run_id:77,kind:'movements',has_more:true});
  state={workspace_id:'workspace-A',owner_user_id:'owner-A',google_email:'a@example.test',lease:'lease',enabled:true,movements:true,invoices:true,cursor_id:'10',watch_expiration:new Date(Date.now()+7*86400000).toISOString(),page_state:{}};batches={};
  mock.rpc.mockReset().mockImplementation(async(name,args)=>{
   if(name==='claim_gmail_push')return {data:structuredClone(state)};
@@ -43,10 +45,10 @@ describe('Continuación persistente push',()=>{
  it('un lote manual ocupado conserva la página y el cursor',async()=>{
   await handler(request());mock.rpc.mockImplementation(async(name,args)=>{
    if(name==='claim_gmail_push')return {data:structuredClone(state)};
-   if(name==='claim_sync_batch')return {data:{busy:true}};
+   if(name==='claim_sync_batch')return {data:{busy:true,id:77}};
    if(name==='save_gmail_push'){Object.assign(state,args.p_patch);return {error:null};}
   });
-  await handler(request());expect(state.cursor_id).toBe('10');expect(state.page_state.refs).toHaveLength(1);expect(state.last_error).toContain('otro lote');
+  const result=await handler(request());expect(await result.json()).toMatchObject({recovering:true,recovered_run_id:77});expect(state.cursor_id).toBe('10');expect(state.page_state.refs).toHaveLength(1);expect(state.page_state.movement_run).toBeUndefined();expect(mock.recover).toHaveBeenCalledWith(expect.objectContaining({workspaceId:'workspace-A'}),77,{movements:true,invoices:true},expect.anything());
  });
  it('el historial caducado y un propietario revocado no adelantan el cursor',async()=>{
   mock.gmail.mockResolvedValue(new Response(null,{status:404}));await handler(request());expect(state.last_error).toContain('historial');expect(state.cursor_id).toBe('10');

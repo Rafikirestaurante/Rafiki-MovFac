@@ -6,6 +6,7 @@ import {workspaceBanks} from '../_shared/workspaceBanks.ts';
 import {SyncBatch,gmailFetch} from '../_shared/syncBatch.ts';
 import {handleMovementSync} from '../_shared/handleMovementSync.ts';
 import {handleInvoiceSync} from '../_shared/handleInvoiceSync.ts';
+import {recoverPushBlocker} from '../_shared/recoverPushBlocker.ts';
 
 type PageState={refs?:Array<{id:string}>;target?:string;next?:string;page_token?:string;started_at?:string;movement_run?:number;invoice_run?:number;movement_done?:boolean;invoice_done?:boolean};
 async function safeEqual(a:string,b:string) {
@@ -62,7 +63,10 @@ Deno.serve(async request=>{
     const parameters=kind==='movements'?{...source,mode:'range',banks,quick_hours:null,date_from:null,date_to:null}:{...source,mode:'recent',date_from:null,date_to:null};
     const {data:claimed,error}=await client.rpc('claim_sync_batch',{p_workspace:s.workspace_id,p_user:s.owner_user_id,p_kind:kind,p_request:parameters,p_run:null});
     if(error)throw error;
-    if(claimed.busy)throw new Error('Hay otro lote activo; push volverá a intentar.');
+    if(claimed.busy){
+     const recovered=await recoverPushBlocker(context,Number(claimed.id),{movements:s.movements,invoices:s.invoices},{movements:handleMovementSync,invoices:handleInvoiceSync});
+     patch.pending=true;await save();return Response.json({recovering:true,...recovered});
+    }
     run=Number(claimed.id);
     const batch=new SyncBatch(client,run,claimed.lease,claimed.state||{});
     if(!batch.state.listing_done) {
